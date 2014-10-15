@@ -12,7 +12,7 @@ public final class NetworkManager extends BaseManager {
 	
 	public NetworkManager(Leader leader) {
 		super(leader);
-		server = new UDPServer();
+		server = new UDPServer(this);
 	}
 
 }

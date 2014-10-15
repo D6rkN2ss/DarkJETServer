@@ -9,9 +9,11 @@ import darkjet.server.network.NetworkManager;
  */
 public final class Leader {
 	public final NetworkManager network;
+	public final long startTime;
 	
 	public Leader() {
 		network = new NetworkManager(this);
+		startTime = System.currentTimeMillis();
 	}
 	
 	public static class BaseManager {

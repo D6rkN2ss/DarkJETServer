@@ -4,6 +4,8 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
+
+import darkjet.server.network.packets.raknet.ConnectedPingPacket;
 import darkjet.server.network.packets.raknet.RaknetIDs;
 
 /**
@@ -11,9 +13,11 @@ import darkjet.server.network.packets.raknet.RaknetIDs;
  * @author Blue Electric
  */
 public final class UDPServer {
+	public NetworkManager network;
 	private DatagramSocket socket;
 	
-	public UDPServer() {
+	public UDPServer(NetworkManager network) {
+		this.network = network;
 		try {
 			socket = new DatagramSocket(null);
 			socket.bind( new InetSocketAddress(19132) );
@@ -45,7 +49,7 @@ public final class UDPServer {
 		}
 	}
 	
-	private final void handlePacket(DatagramPacket packet) {
+	private final void handlePacket(DatagramPacket packet) throws Exception {
 		int RID = packet.getData()[0];
 		
 		//Raknet Create Connection
@@ -53,6 +57,8 @@ public final class UDPServer {
 			switch(RID) {
 				case RaknetIDs.UNCONNECTED_PING:
 				case RaknetIDs.UNCONNECTED_PING_OPEN_CONNECTIONS:
+					ConnectedPingPacket pingPk = new ConnectedPingPacket( "DARKJET TS", network.leader.startTime, 39L );
+					sendTo( pingPk.getResponse() , packet.getAddress().getHostAddress(), packet.getPort() );
 					break;
 				case RaknetIDs.OPEN_CONNECTION_REQUEST_1:
 					break;
