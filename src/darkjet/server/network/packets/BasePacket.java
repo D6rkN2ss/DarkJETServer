@@ -35,15 +35,16 @@ public abstract class BasePacket {
 	/**
 	 * Parse with Internal Buffer
 	 */
-	public final void parse() {
-		parse(bb.array());
+	public void parse() {
+		throw new RuntimeException("Didn't support parse");
 	}
 	/**
 	 * Parse Buffer and Save data in Packet Class
 	 * @param buffer Buffer to Parse
 	 */
 	public void parse(byte[] buffer) {
-		throw new RuntimeException("Didn't support parse");
+		bb = ByteBuffer.wrap( buffer );
+		parse();
 	}
 	
 	/**
