@@ -30,6 +30,8 @@ public abstract class BasePacket {
 		bb = ByteBuffer.wrap( buffer );
 	}
 	
+	public abstract int getPID();
+	
 	/**
 	 * Parse with Internal Buffer
 	 */
