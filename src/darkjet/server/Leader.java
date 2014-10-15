@@ -3,7 +3,8 @@ package darkjet.server;
 import darkjet.server.network.NetworkManager;
 
 /**
- * Leader of Managers
+ * Leader of Managers<br>
+ * Warning: Leader must do not anything except create/provide Manager(s).
  * @author Blue Electric
  */
 public final class Leader {
