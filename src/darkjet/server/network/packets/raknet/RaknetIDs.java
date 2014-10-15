@@ -6,7 +6,7 @@ package darkjet.server.network.packets.raknet;
  */
 public final class RaknetIDs {
 	public static final int STRUCTURE = 5;
-	public static byte[] MAGIC = { (byte)0x00, (byte)0xff, (byte)0xff, (byte)0x00, (byte)0xfe, (byte)0xfe, (byte)0xfe, (byte)0xfe, (byte)0xfd, (byte)0xfd, (byte)0xfd, (byte)0xfd, (byte)0x12, (byte)0x34, (byte)0x56, (byte)0x78 };
+	public static final byte[] MAGIC = { (byte)0x00, (byte)0xff, (byte)0xff, (byte)0x00, (byte)0xfe, (byte)0xfe, (byte)0xfe, (byte)0xfe, (byte)0xfd, (byte)0xfd, (byte)0xfd, (byte)0xfd, (byte)0x12, (byte)0x34, (byte)0x56, (byte)0x78 };
 
 	public static final byte UNCONNECTED_PING = (byte)0x01;
 	public static final byte UNCONNECTED_PING_OPEN_CONNECTIONS = (byte)0x02;

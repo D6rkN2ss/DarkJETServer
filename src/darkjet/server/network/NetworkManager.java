@@ -8,7 +8,7 @@ import darkjet.server.Leader.BaseManager;
  * @author Blue Electric
  */
 public final class NetworkManager extends BaseManager {
-	public UDPServer server;
+	public final UDPServer server;
 	
 	public NetworkManager(Leader leader) {
 		super(leader);

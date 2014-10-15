@@ -13,7 +13,7 @@ import darkjet.server.network.packets.raknet.RaknetIDs;
  * @author Blue Electric
  */
 public final class UDPServer {
-	public NetworkManager network;
+	public final NetworkManager network;
 	private DatagramSocket socket;
 	
 	public UDPServer(NetworkManager network) {
