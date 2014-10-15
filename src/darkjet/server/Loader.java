@@ -7,6 +7,6 @@ package darkjet.server;
 public final class Loader {
 	public final static void main(String[] args) {
 		Leader leader = new Leader();
-		
+		leader.network.server.progressReceive();
 	}
 }
