@@ -3,8 +3,8 @@ package darkjet.server.network;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.Arrays;
+import darkjet.server.network.packets.raknet.RaknetIDs;
 
 /**
  * Low-level UDP Handler
@@ -46,6 +46,27 @@ public final class UDPServer {
 	}
 	
 	private final void handlePacket(DatagramPacket packet) {
+		int RID = packet.getData()[0];
 		
+		//Raknet Create Connection
+		if(RID >= RaknetIDs.UNCONNECTED_PING && RID <= RaknetIDs.ADVERTISE_SYSTEM) {
+			switch(RID) {
+				case RaknetIDs.UNCONNECTED_PING:
+				case RaknetIDs.UNCONNECTED_PING_OPEN_CONNECTIONS:
+					break;
+				case RaknetIDs.OPEN_CONNECTION_REQUEST_1:
+					break;
+				case RaknetIDs.OPEN_CONNECTION_REQUEST_2:
+					break;
+				default:
+					throw new RuntimeException("Unknown Packet");
+			}
+		//Minecraft Data Transfer
+		} else if( RID >= RaknetIDs.DATA_PACKET_0 && RID <= RaknetIDs.DATA_PACKET_F ) {
+			//TODO Handle Packet with Player
+		//Verify Data Transfer
+		} else if( RID == RaknetIDs.ACK || RID == RaknetIDs.NACK ) {
+			//TODO Verify Packet with Player
+		}
 	}
 }
