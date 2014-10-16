@@ -7,6 +7,7 @@ import java.util.Arrays;
 
 import darkjet.server.network.packets.raknet.ConnectedPingPacket;
 import darkjet.server.network.packets.raknet.Connection1Packet;
+import darkjet.server.network.packets.raknet.Connection2Packet;
 import darkjet.server.network.packets.raknet.RaknetIDs;
 
 /**
@@ -67,11 +68,16 @@ public final class UDPServer {
 					sendTo( pingPk.getResponse() , packet.getAddress().getHostAddress(), packet.getPort() );
 					break;
 				case RaknetIDs.OPEN_CONNECTION_REQUEST_1:
+					//TODO serverID
 					Connection1Packet connect1Pk = new Connection1Packet( 39L );
 					connect1Pk.parse( packet.getData() );
 					sendTo( connect1Pk.getResponse(), packet.getAddress().getHostAddress(), packet.getPort() );
 					break;
 				case RaknetIDs.OPEN_CONNECTION_REQUEST_2:
+					//TODO serverID
+					Connection2Packet connect2Pk = new Connection2Packet( 39L, (short) packet.getPort() );
+					connect2Pk.parse( packet.getData() );
+					sendTo( connect2Pk.getResponse(), packet.getAddress().getHostAddress(), packet.getPort() );
 					break;
 				default:
 					throw new RuntimeException("Unknown Packet");
