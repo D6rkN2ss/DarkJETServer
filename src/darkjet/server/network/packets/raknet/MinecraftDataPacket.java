@@ -4,11 +4,8 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 import darkjet.server.Utils;
-import darkjet.server.network.minecraft.BaseMinecraftPacket;
 import darkjet.server.network.packets.BasePacket;
-import darkjet.server.network.player.Player;
 
 public final class MinecraftDataPacket extends BasePacket {
 	protected int PID;
