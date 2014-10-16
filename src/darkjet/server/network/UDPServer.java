@@ -6,6 +6,7 @@ import java.net.InetSocketAddress;
 import java.util.Arrays;
 
 import darkjet.server.network.packets.raknet.ConnectedPingPacket;
+import darkjet.server.network.packets.raknet.Connection1Packet;
 import darkjet.server.network.packets.raknet.RaknetIDs;
 
 /**
@@ -24,6 +25,10 @@ public final class UDPServer {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+	
+	public final void sendTo(byte[] buffer, DatagramPacket packet) throws Exception {
+		sendTo(buffer, packet.getAddress().getHostAddress(), packet.getPort());
 	}
 	
 	public final void sendTo(byte[] buffer, String ip, int port) throws Exception {
@@ -58,9 +63,13 @@ public final class UDPServer {
 				case RaknetIDs.UNCONNECTED_PING:
 				case RaknetIDs.UNCONNECTED_PING_OPEN_CONNECTIONS:
 					ConnectedPingPacket pingPk = new ConnectedPingPacket( "DARKJET TS", network.leader.startTime, 39L );
+					pingPk.parse( packet.getData() );
 					sendTo( pingPk.getResponse() , packet.getAddress().getHostAddress(), packet.getPort() );
 					break;
 				case RaknetIDs.OPEN_CONNECTION_REQUEST_1:
+					Connection1Packet connect1Pk = new Connection1Packet( 39L );
+					connect1Pk.parse( packet.getData() );
+					sendTo( connect1Pk.getResponse(), packet.getAddress().getHostAddress(), packet.getPort() );
 					break;
 				case RaknetIDs.OPEN_CONNECTION_REQUEST_2:
 					break;
