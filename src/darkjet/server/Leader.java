@@ -1,6 +1,7 @@
 package darkjet.server;
 
 import darkjet.server.network.NetworkManager;
+import darkjet.server.network.player.PlayerManager;
 
 /**
  * Leader of Managers<br>
@@ -9,10 +10,13 @@ import darkjet.server.network.NetworkManager;
  */
 public final class Leader {
 	public final NetworkManager network;
+	public final PlayerManager player;
 	public final long startTime;
 	
 	public Leader() {
 		network = new NetworkManager(this);
+		player = new PlayerManager(this);
+		
 		startTime = System.currentTimeMillis();
 	}
 	

@@ -10,6 +10,7 @@ import darkjet.server.network.packets.raknet.Connection1Packet;
 import darkjet.server.network.packets.raknet.Connection2Packet;
 import darkjet.server.network.packets.raknet.IncompatibleProtocolPacket;
 import darkjet.server.network.packets.raknet.RaknetIDs;
+import darkjet.server.network.player.Player;
 
 /**
  * Low-level UDP Handler
@@ -74,6 +75,7 @@ public final class UDPServer {
 					connect1Pk.parse( packet.getData() );
 					//Verify Protocol
 					if( connect1Pk.protocolVersion != RaknetIDs.STRUCTURE ) {
+						//TODO serverID
 						sendTo( new IncompatibleProtocolPacket(39L, RaknetIDs.STRUCTURE).getResponse(), packet);
 						break;
 					}
@@ -84,6 +86,8 @@ public final class UDPServer {
 					Connection2Packet connect2Pk = new Connection2Packet( 39L, (short) packet.getPort() );
 					connect2Pk.parse( packet.getData() );
 					sendTo( connect2Pk.getResponse(), packet );
+					Player player = new Player(packet.getAddress().getHostAddress(), packet.getPort(), connect2Pk.mtuSize, connect2Pk.clientID);
+					network.leader.player.addPlayer(player);
 					break;
 				default:
 					throw new RuntimeException("Unknown Packet");
