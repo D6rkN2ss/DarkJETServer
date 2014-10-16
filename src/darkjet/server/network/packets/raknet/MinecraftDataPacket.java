@@ -98,53 +98,5 @@ public final class MinecraftDataPacket extends BasePacket {
 			bb.put(buffer);
 			return bb.array();
 		}
-		
-		public final static class InternalDataPacketQueue {
-			public ByteBuffer buffer;
-			
-			public int sequenceNumber;
-			
-			public final Player player;
-			public final int mtu;
-			
-			public InternalDataPacketQueue(Player player, int mtu) {
-				this.player = player;
-				this.mtu = mtu;
-				buffer = ByteBuffer.allocate(mtu);
-				reset();
-			}
-			
-			public final void reset() {
-				buffer.clear();
-				buffer.position(4);
-			}
-			
-			public final void addMinecraftPacket(BaseMinecraftPacket bmp) throws Exception {
-				addMinecraftPacket( bmp.getResponse() );
-			}
-			
-			/**
-			 * Add MinecraftPacket to Buffer, if Buffer is Full, send directly
-			 * @param buf
-			 */
-			public final void addMinecraftPacket(byte[] buf) throws Exception {
-				if( buffer.position() < buffer.position() + buf.length ) {
-					//Buffer is Empty = buf too big to send.
-					if(buffer.position() == 4) {
-						throw new RuntimeException("Unhandled Too Big Packet");
-					} else {
-						send();
-						reset();
-						//retry
-						addMinecraftPacket(buf);
-					}
-					return;
-				}
-			}
-			
-			public final void send() throws Exception {
-				player.leader.network.server.sendTo(buffer.array(), player.IP, player.port);
-			}
-		}
 	}
 }
