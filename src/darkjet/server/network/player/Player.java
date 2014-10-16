@@ -8,6 +8,7 @@ import darkjet.server.Leader;
 import darkjet.server.Utils;
 import darkjet.server.network.minecraft.BaseMinecraftPacket;
 import darkjet.server.network.minecraft.ClientConnectPacket;
+import darkjet.server.network.minecraft.ClientHandshakePacket;
 import darkjet.server.network.minecraft.MinecraftIDs;
 import darkjet.server.network.minecraft.PingPacket;
 import darkjet.server.network.minecraft.PongPacket;
@@ -108,6 +109,10 @@ public final class Player {
 					connect.parse( ipck.buffer );
 					ServerHandshakePacket servershake = new ServerHandshakePacket(port, connect.session);
 					Queue.addMinecraftPacket(servershake);
+					break;
+				case MinecraftIDs.CLIENT_HANDSHAKE:
+					ClientHandshakePacket clientshake = new ClientHandshakePacket();
+					clientshake.parse( ipck.buffer );
 					break;
 			}
 		}
