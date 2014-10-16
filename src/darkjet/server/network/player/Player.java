@@ -7,6 +7,9 @@ import java.util.HashMap;
 import darkjet.server.Leader;
 import darkjet.server.Utils;
 import darkjet.server.network.minecraft.BaseMinecraftPacket;
+import darkjet.server.network.minecraft.MinecraftIDs;
+import darkjet.server.network.minecraft.PingPacket;
+import darkjet.server.network.minecraft.PongPacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket.ACKPacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket.NACKPacket;
@@ -93,7 +96,11 @@ public final class Player {
 		ACKQueue.add(MDP.sequenceNumber);
 		for(InternalDataPacket ipck : MDP.packets){
 			switch( ipck.buffer[0] ) {
-
+				case MinecraftIDs.PING:
+					PingPacket ping = new PingPacket(); ping.parse(ipck.buffer);
+					PongPacket pong = new PongPacket(ping.pingID);
+					Queue.addMinecraftPacket(pong);
+					break;
 			}
 		}
 	}
