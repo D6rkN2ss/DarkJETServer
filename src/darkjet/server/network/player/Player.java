@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+
 import darkjet.server.Leader;
 import darkjet.server.Utils;
 import darkjet.server.math.Vector;
@@ -13,6 +14,7 @@ import darkjet.server.network.minecraft.ClientHandshakePacket;
 import darkjet.server.network.minecraft.FullChunkDataPacket;
 import darkjet.server.network.minecraft.LoginPacket;
 import darkjet.server.network.minecraft.LoginStatusPacket;
+import darkjet.server.network.minecraft.MessagePacket;
 import darkjet.server.network.minecraft.MinecraftIDs;
 import darkjet.server.network.minecraft.PingPacket;
 import darkjet.server.network.minecraft.PongPacket;
@@ -48,9 +50,9 @@ public final class Player {
 	private ArrayList<Integer> NACKQueue; // Not received packet queue
 	private HashMap<Integer, byte[]> recoveryQueue;
 	
-	public final InternalDataPacketQueue Queue;
+	private final InternalDataPacketQueue Queue;
 	
-	public final ChunkSender chunkSender;
+	private final ChunkSender chunkSender;
 	
 	public Player(Leader leader, String IP, int port, short mtu, long clientID) throws Exception {
 		this.leader = leader;
@@ -69,7 +71,22 @@ public final class Player {
 		chunkSender = new ChunkSender();
 	}
 	
-	public final class ChunkSender extends Thread {
+	//External Part
+	public final void sendChat(String message) throws Exception {
+		MessagePacket pak = new MessagePacket(message);
+		Queue.addMinecraftPacket(pak);
+	}
+	
+	public final void close() {
+		
+	}
+
+	public final void close(String reason) {
+		
+	}
+	
+	//Internal Part
+	private final class ChunkSender extends Thread {
 		@Override
 		public final void run() {
 			int centerX = 128/16;
@@ -103,14 +120,6 @@ public final class Player {
 				}
 			}
 		}
-	}
-	
-	public final void close() {
-		
-	}
-
-	public final void close(String reason) {
-		
 	}
 	
 	public final void update() throws Exception {
@@ -170,6 +179,8 @@ public final class Player {
 					LoginPacket login = new LoginPacket();
 					login.parse( ipck.buffer );
 					
+					name = login.username;
+					
 					if(login.protocol != MinecraftIDs.CURRENT_PROTOCOL || login.protocol2 != MinecraftIDs.CURRENT_PROTOCOL){
 						if(login.protocol < MinecraftIDs.CURRENT_PROTOCOL || login.protocol2 < MinecraftIDs.CURRENT_PROTOCOL){
 							Queue.addMinecraftPacket(new LoginStatusPacket( LoginStatusPacket.CLIENT_OUTDATE ));
@@ -200,6 +211,11 @@ public final class Player {
 					
 					chunkSender.start();
 
+					break;
+				case MinecraftIDs.MESSAGE:
+					MessagePacket message = new MessagePacket();
+					message.parse( ipck.buffer );
+					leader.chat.handleChat( this, message.getMessage() );
 					break;
 			}
 		}
