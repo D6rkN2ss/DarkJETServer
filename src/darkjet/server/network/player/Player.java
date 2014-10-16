@@ -6,13 +6,17 @@ import java.util.HashMap;
 
 import darkjet.server.Leader;
 import darkjet.server.Utils;
+import darkjet.server.math.Vector;
 import darkjet.server.network.minecraft.BaseMinecraftPacket;
 import darkjet.server.network.minecraft.ClientConnectPacket;
 import darkjet.server.network.minecraft.ClientHandshakePacket;
+import darkjet.server.network.minecraft.LoginPacket;
+import darkjet.server.network.minecraft.LoginStatusPacket;
 import darkjet.server.network.minecraft.MinecraftIDs;
 import darkjet.server.network.minecraft.PingPacket;
 import darkjet.server.network.minecraft.PongPacket;
 import darkjet.server.network.minecraft.ServerHandshakePacket;
+import darkjet.server.network.minecraft.StartGamePacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket.ACKPacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket.NACKPacket;
@@ -30,6 +34,8 @@ public final class Player {
 	public final int port;
 	public final short mtu;
 	public final long clientID;
+	
+	public String name;
 	
 	private int lastSequenceNum = 0;
 	
@@ -113,6 +119,29 @@ public final class Player {
 				case MinecraftIDs.CLIENT_HANDSHAKE:
 					ClientHandshakePacket clientshake = new ClientHandshakePacket();
 					clientshake.parse( ipck.buffer );
+					break;
+				case MinecraftIDs.LOGIN:
+					LoginPacket login = new LoginPacket();
+					login.parse( ipck.buffer );
+					
+					if(login.protocol != MinecraftIDs.CURRENT_PROTOCOL || login.protocol2 != MinecraftIDs.CURRENT_PROTOCOL){
+						if(login.protocol < MinecraftIDs.CURRENT_PROTOCOL || login.protocol2 < MinecraftIDs.CURRENT_PROTOCOL){
+							Queue.addMinecraftPacket(new LoginStatusPacket( LoginStatusPacket.CLIENT_OUTDATE ));
+							close("Wrong Protocol: Client is outdated.");
+						}
+						if(login.protocol > MinecraftIDs.CURRENT_PROTOCOL || login.protocol2 > MinecraftIDs.CURRENT_PROTOCOL){
+							Queue.addMinecraftPacket(new LoginStatusPacket( LoginStatusPacket.SERVER_OUTDATE ));
+							close("Wrong Protocol: Server is outdated.");
+						}
+						break;
+					}
+					//TODO Player count limit
+					Queue.addMinecraftPacket( new LoginStatusPacket(LoginStatusPacket.NORMAL) );
+					//TODO Check Player Name is Valid?
+					//TODO Check Another Location Player
+					
+					StartGamePacket startgame = new StartGamePacket(new Vector(128, 4, 128), new Vector(128, 4, 128), 1, 0L, 0);
+					Queue.addMinecraftPacket(startgame);
 					break;
 			}
 		}
