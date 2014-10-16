@@ -1,16 +1,63 @@
 package darkjet.server;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
+import java.util.zip.Deflater;
+import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
 
 /**
  * Utility from Block Server
  * @author BlockServer
  */
 public class Utils{
+	/**
+	 * File to ByteArray
+	 * @param file File to Read
+	 * @return File's Buffer
+	 * @author Blue Electric
+	 */
+	public final static byte[] FiletoByteArray(File file) {
+		try {
+			FileInputStream fis = new FileInputStream(file);
+			byte[] result = new byte[ fis.available() ];
+			fis.read(result); fis.close();
+			return result;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+	
+	/**
+	 * Compress byte for Sending Chunk or Etc.
+	 * @param compress Bytes to Compress
+	 * @return compressed Byte
+	 * @author Blue Electric
+	 */
+	public final static byte[] compressByte(byte[] compress) {
+		Deflater deflater = new Deflater(8);
+		deflater.setInput( compress );
+		deflater.finish();
+		if(deflater.finished()) {
+			throw new RuntimeException("Length unexpectedly 0, Written Bytes: " + deflater.getBytesWritten());
+		}
+		ByteOutputStream bos = new ByteOutputStream();
+		byte[] buf = new byte[1024];
+		while( !deflater.finished() ) {
+			int count = deflater.deflate(buf);
+			bos.write(buf, 0, count);
+		}
+		deflater.end();
+		buf = bos.getBytes();
+		bos.close();
+		return buf;
+	}
+	
 	public static int getTriad(byte[] data, int offset){
 		return (int) (data[offset++] << 16 | data[offset++] << 8  | data[offset]);
 	}

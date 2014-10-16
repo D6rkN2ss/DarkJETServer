@@ -2,14 +2,15 @@ package darkjet.server.network.player;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
-
 import darkjet.server.Leader;
 import darkjet.server.Utils;
 import darkjet.server.math.Vector;
 import darkjet.server.network.minecraft.BaseMinecraftPacket;
 import darkjet.server.network.minecraft.ClientConnectPacket;
 import darkjet.server.network.minecraft.ClientHandshakePacket;
+import darkjet.server.network.minecraft.FullChunkDataPacket;
 import darkjet.server.network.minecraft.LoginPacket;
 import darkjet.server.network.minecraft.LoginStatusPacket;
 import darkjet.server.network.minecraft.MinecraftIDs;
@@ -49,6 +50,8 @@ public final class Player {
 	
 	public final InternalDataPacketQueue Queue;
 	
+	public final ChunkSender chunkSender;
+	
 	public Player(Leader leader, String IP, int port, short mtu, long clientID) throws Exception {
 		this.leader = leader;
 		this.IP = IP;
@@ -63,6 +66,43 @@ public final class Player {
 		Queue = new InternalDataPacketQueue(1536);
 		
 		leader.task.addTask( new MethodTask(-1, 10, this, "update") );
+		chunkSender = new ChunkSender();
+	}
+	
+	public final class ChunkSender extends Thread {
+		@Override
+		public final void run() {
+			int centerX = 128/16;
+			int centerZ = 128/16;
+			int radius = 4;
+			
+			HashMap<Integer, ArrayList<Vector>> MapOrder = new HashMap<>();
+			ArrayList<Integer> orders = new ArrayList<>();
+			
+			for (int x = -radius; x <= radius; ++x) {
+				for (int z = -radius; z <= radius; ++z) {
+					int distance = (x*x) + (z*z);
+					int chunkX = x + centerX;
+					int chunkZ = z + centerZ;
+					if( !MapOrder.containsKey( distance ) ) {
+						MapOrder.put(distance, new ArrayList<Vector>());
+					}
+					MapOrder.get(distance).add( new Vector(chunkX, 0, chunkZ) );
+					orders.add(distance);
+				}
+			}
+			Collections.sort(orders);
+			
+			for( Integer i : orders ) {
+				for( Vector v : MapOrder.get(i) ) {
+					try {
+						Queue.addMinecraftPacket( new FullChunkDataPacket(v.getX(), v.getZ()) );
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		}
 	}
 	
 	public final void close() {
@@ -158,6 +198,8 @@ public final class Player {
 					SetHealthPacket shp = new SetHealthPacket((byte) 0x20);
 					Queue.addMinecraftPacket(shp);
 					
+					chunkSender.start();
+
 					break;
 			}
 		}
@@ -207,32 +249,40 @@ public final class Player {
 		 * @param buf
 		 */
 		public final void addMinecraftPacket(byte[] buf) throws Exception {
-			if( mtu < buffer.position() + buf.length ) {
-				//Buffer is Empty = buf too big to send.
-				if( isEmpty() ) {
-					throw new RuntimeException("Unhandled Too Big Packet");
-				} else {
-					send();
-					//retry
-					addMinecraftPacket(buf);
+			synchronized ( this ) {
+				if( mtu < buffer.position() + buf.length ) {
+					//Buffer is Empty = buf too big to send.
+					if( isEmpty() ) {
+						throw new RuntimeException("Unhandled Too Big Packet");
+					} else {
+						send();
+						//retry
+						addMinecraftPacket(buf);
+					}
+					return;
 				}
-				return;
+				InternalDataPacket idp = new InternalDataPacket();
+				idp.buffer = buf;
+				idp.reliability = 2;
+				idp.messageIndex = messageIndex++;
+				buffer.put( idp.toBinary() );
 			}
-			InternalDataPacket idp = new InternalDataPacket();
-			idp.buffer = buf;
-			idp.reliability = 2;
-			idp.messageIndex = messageIndex++;
-			buffer.put( idp.toBinary() );
 		}
 		
 		public final void send() throws Exception {
-			buffer.position(0);
-			buffer.put( RaknetIDs.DATA_PACKET_4 );
-			buffer.put( Utils.putLTriad(sequenceNumber) );
-			recoveryQueue.put(sequenceNumber, buffer.array());
-			leader.network.server.sendTo(buffer.array(), IP, port);
-			sequenceNumber++;
-			reset();
+			synchronized ( this ) {
+				int len = buffer.position();
+				buffer.position(0);
+				buffer.put( RaknetIDs.DATA_PACKET_4 );
+				buffer.put( Utils.putLTriad(sequenceNumber) );
+				byte[] sendBuffer = new byte[4+len];
+				buffer.position(0);
+				buffer.get(sendBuffer);
+				recoveryQueue.put(sequenceNumber, sendBuffer);
+				leader.network.server.sendTo(sendBuffer, IP, port);
+				sequenceNumber++;
+				reset();
+			}
 		}
 	}
 }
