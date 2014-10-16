@@ -65,19 +65,19 @@ public final class UDPServer {
 				case RaknetIDs.UNCONNECTED_PING_OPEN_CONNECTIONS:
 					ConnectedPingPacket pingPk = new ConnectedPingPacket( "DARKJET TS", network.leader.startTime, 39L );
 					pingPk.parse( packet.getData() );
-					sendTo( pingPk.getResponse() , packet.getAddress().getHostAddress(), packet.getPort() );
+					sendTo( pingPk.getResponse() , packet );
 					break;
 				case RaknetIDs.OPEN_CONNECTION_REQUEST_1:
 					//TODO serverID
 					Connection1Packet connect1Pk = new Connection1Packet( 39L );
 					connect1Pk.parse( packet.getData() );
-					sendTo( connect1Pk.getResponse(), packet.getAddress().getHostAddress(), packet.getPort() );
+					sendTo( connect1Pk.getResponse(), packet );
 					break;
 				case RaknetIDs.OPEN_CONNECTION_REQUEST_2:
 					//TODO serverID
 					Connection2Packet connect2Pk = new Connection2Packet( 39L, (short) packet.getPort() );
 					connect2Pk.parse( packet.getData() );
-					sendTo( connect2Pk.getResponse(), packet.getAddress().getHostAddress(), packet.getPort() );
+					sendTo( connect2Pk.getResponse(), packet );
 					break;
 				default:
 					throw new RuntimeException("Unknown Packet");
