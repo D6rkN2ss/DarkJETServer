@@ -52,11 +52,13 @@ public final class Player {
 		this.mtu = mtu;
 		this.clientID = clientID;
 		
+		System.out.println(mtu);
+		
 		ACKQueue = new ArrayList<Integer>();
 		NACKQueue = new ArrayList<Integer>();
 		recoveryQueue = new HashMap<Integer, byte[]>();
 		
-		Queue = new InternalDataPacketQueue(mtu);
+		Queue = new InternalDataPacketQueue(1536);
 	}
 	
 	public final void close() {
@@ -191,7 +193,7 @@ public final class Player {
 		 * @param buf
 		 */
 		public final void addMinecraftPacket(byte[] buf) throws Exception {
-			if( buffer.position() < buffer.position() + buf.length ) {
+			if( mtu < buffer.position() + buf.length ) {
 				//Buffer is Empty = buf too big to send.
 				if( isEmpty() ) {
 					throw new RuntimeException("Unhandled Too Big Packet");
