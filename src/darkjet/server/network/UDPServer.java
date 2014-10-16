@@ -4,11 +4,14 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
-
+import darkjet.server.network.packets.raknet.AcknowledgePacket;
+import darkjet.server.network.packets.raknet.AcknowledgePacket.ACKPacket;
+import darkjet.server.network.packets.raknet.AcknowledgePacket.NACKPacket;
 import darkjet.server.network.packets.raknet.ConnectedPingPacket;
 import darkjet.server.network.packets.raknet.Connection1Packet;
 import darkjet.server.network.packets.raknet.Connection2Packet;
 import darkjet.server.network.packets.raknet.IncompatibleProtocolPacket;
+import darkjet.server.network.packets.raknet.MinecraftDataPacket;
 import darkjet.server.network.packets.raknet.RaknetIDs;
 import darkjet.server.network.player.Player;
 
@@ -60,6 +63,7 @@ public final class UDPServer {
 	private final void handlePacket(DatagramPacket packet) throws Exception {
 		int RID = packet.getData()[0];
 		
+		final String IP = packet.getAddress().getHostAddress();
 		//Raknet Create Connection
 		if(RID >= RaknetIDs.UNCONNECTED_PING && RID <= RaknetIDs.ADVERTISE_SYSTEM) {
 			switch(RID) {
@@ -86,7 +90,7 @@ public final class UDPServer {
 					Connection2Packet connect2Pk = new Connection2Packet( 39L, (short) packet.getPort() );
 					connect2Pk.parse( packet.getData() );
 					sendTo( connect2Pk.getResponse(), packet );
-					Player player = new Player(network.leader, packet.getAddress().getHostAddress(), packet.getPort(), connect2Pk.mtuSize, connect2Pk.clientID);
+					Player player = new Player(network.leader, IP, packet.getPort(), connect2Pk.mtuSize, connect2Pk.clientID);
 					network.leader.player.addPlayer(player);
 					break;
 				default:
@@ -94,10 +98,22 @@ public final class UDPServer {
 			}
 		//Minecraft Data Transfer
 		} else if( RID >= RaknetIDs.DATA_PACKET_0 && RID <= RaknetIDs.DATA_PACKET_F ) {
-			//TODO Handle Packet with Player
+			MinecraftDataPacket mdp = new MinecraftDataPacket();
+			mdp.parse( packet.getData() );
+			if( !network.leader.player.existPlayer( IP ) ) {
+				return;
+			}
+			network.leader.player.getPlayer( IP ).handlePacket(mdp);
 		//Verify Data Transfer
 		} else if( RID == RaknetIDs.ACK || RID == RaknetIDs.NACK ) {
-			//TODO Verify Packet with Player
+			AcknowledgePacket ACK;
+			if( RID == RaknetIDs.ACK ) { ACK = new ACKPacket(); }
+			else { ACK = new NACKPacket(); }
+			ACK.parse( packet.getData() );
+			if( !network.leader.player.existPlayer( IP ) ) {
+				return;
+			}
+			network.leader.player.getPlayer( IP ).handleVerfiy(ACK);
 		}
 	}
 }
