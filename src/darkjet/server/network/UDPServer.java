@@ -86,7 +86,7 @@ public final class UDPServer {
 					Connection2Packet connect2Pk = new Connection2Packet( 39L, (short) packet.getPort() );
 					connect2Pk.parse( packet.getData() );
 					sendTo( connect2Pk.getResponse(), packet );
-					Player player = new Player(packet.getAddress().getHostAddress(), packet.getPort(), connect2Pk.mtuSize, connect2Pk.clientID);
+					Player player = new Player(network.leader, packet.getAddress().getHostAddress(), packet.getPort(), connect2Pk.mtuSize, connect2Pk.clientID);
 					network.leader.player.addPlayer(player);
 					break;
 				default:
