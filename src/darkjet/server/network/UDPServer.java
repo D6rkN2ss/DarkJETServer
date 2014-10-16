@@ -51,9 +51,13 @@ public final class UDPServer {
 			byte[] buffer = new byte[1539];
 			DatagramPacket dp = new DatagramPacket(buffer, buffer.length);
 			while( !Thread.interrupted() ) {
-				dp.setData(buffer);
-				receive(dp);
-				handlePacket(dp);
+				try {
+					dp.setData(buffer);
+					receive(dp);
+					handlePacket(dp);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
