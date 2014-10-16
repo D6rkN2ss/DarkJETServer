@@ -1,5 +1,7 @@
 package darkjet.server.network.player;
 
+import darkjet.server.Leader;
+
 /**
  * Minecraft Packet Handler
  * @author Blue Electric
