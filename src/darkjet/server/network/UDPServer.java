@@ -63,7 +63,7 @@ public final class UDPServer {
 	private final void handlePacket(DatagramPacket packet) throws Exception {
 		int RID = packet.getData()[0];
 		
-		final String IP = packet.getAddress().getHostAddress();
+		final String IP = packet.getAddress().toString().replace("/", "");
 		//Raknet Create Connection
 		if(RID >= RaknetIDs.UNCONNECTED_PING && RID <= RaknetIDs.ADVERTISE_SYSTEM) {
 			switch(RID) {
