@@ -68,7 +68,6 @@ public abstract class AcknowledgePacket extends BasePacket {
 
 	@Override
 	public void parse() {
-		ByteBuffer bb = ByteBuffer.wrap(buffer, 1, buffer.length - 1);
 		int count = bb.getShort();
 		List<Integer> packets = new ArrayList<Integer>();
 		for(int i = 0; i < count && bb.position() < bb.capacity(); ++i){
