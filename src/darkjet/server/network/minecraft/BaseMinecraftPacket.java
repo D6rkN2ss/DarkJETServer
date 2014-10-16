@@ -1,0 +1,7 @@
+package darkjet.server.network.minecraft;
+
+import darkjet.server.network.packets.BasePacket;
+
+public abstract class BaseMinecraftPacket extends BasePacket {
+
+}
