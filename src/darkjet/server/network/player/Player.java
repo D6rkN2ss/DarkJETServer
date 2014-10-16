@@ -23,6 +23,7 @@ import darkjet.server.network.packets.raknet.AcknowledgePacket.NACKPacket;
 import darkjet.server.network.packets.raknet.MinecraftDataPacket;
 import darkjet.server.network.packets.raknet.RaknetIDs;
 import darkjet.server.network.packets.raknet.MinecraftDataPacket.InternalDataPacket;
+import darkjet.server.tasker.MethodTask;
 
 /**
  * Minecraft Packet Handler
@@ -45,20 +46,20 @@ public final class Player {
 	
 	public final InternalDataPacketQueue Queue;
 	
-	public Player(Leader leader, String IP, int port, short mtu, long clientID) {
+	public Player(Leader leader, String IP, int port, short mtu, long clientID) throws Exception {
 		this.leader = leader;
 		this.IP = IP;
 		this.port = port;
 		this.mtu = mtu;
 		this.clientID = clientID;
 		
-		System.out.println(mtu);
-		
 		ACKQueue = new ArrayList<Integer>();
 		NACKQueue = new ArrayList<Integer>();
 		recoveryQueue = new HashMap<Integer, byte[]>();
 		
 		Queue = new InternalDataPacketQueue(1536);
+		
+		leader.task.addTask( new MethodTask(-1, 10, this, "update") );
 	}
 	
 	public final void close() {
