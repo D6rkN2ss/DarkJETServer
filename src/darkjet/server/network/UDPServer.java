@@ -8,6 +8,7 @@ import java.util.Arrays;
 import darkjet.server.network.packets.raknet.ConnectedPingPacket;
 import darkjet.server.network.packets.raknet.Connection1Packet;
 import darkjet.server.network.packets.raknet.Connection2Packet;
+import darkjet.server.network.packets.raknet.IncompatibleProtocolPacket;
 import darkjet.server.network.packets.raknet.RaknetIDs;
 
 /**
@@ -71,6 +72,11 @@ public final class UDPServer {
 					//TODO serverID
 					Connection1Packet connect1Pk = new Connection1Packet( 39L );
 					connect1Pk.parse( packet.getData() );
+					//Verify Protocol
+					if( connect1Pk.protocolVersion != RaknetIDs.STRUCTURE ) {
+						sendTo( new IncompatibleProtocolPacket(39L, RaknetIDs.STRUCTURE).getResponse(), packet);
+						break;
+					}
 					sendTo( connect1Pk.getResponse(), packet );
 					break;
 				case RaknetIDs.OPEN_CONNECTION_REQUEST_2:
