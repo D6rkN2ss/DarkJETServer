@@ -10,7 +10,12 @@ public abstract class BaseLoginPacket extends BasePacket {
 	public BaseLoginPacket(byte[] buffer) {
 		super(buffer);
 	}
-
+	
+	@Override
+	public final int getPID() {
+		return PID;
+	}
+	
 	public static final byte[] magic = new byte[] {
 		(byte)0x00, (byte)0xff, (byte)0xff, (byte)0x00,
 		(byte)0xfe, (byte)0xfe, (byte)0xfe, (byte)0xfe,

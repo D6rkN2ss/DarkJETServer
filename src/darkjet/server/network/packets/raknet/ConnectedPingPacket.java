@@ -47,10 +47,4 @@ public final class ConnectedPingPacket extends BaseLoginPacket {
 		
 		return bb.array();
 	}
-
-	@Override
-	public int getPID() {
-		return PID;
-	}
-	
 }
