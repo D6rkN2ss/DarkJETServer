@@ -1,5 +1,6 @@
 package darkjet.server.network.player;
 
+import java.util.Collection;
 import java.util.HashMap;
 
 import darkjet.server.Leader;
@@ -18,6 +19,9 @@ public final class PlayerManager extends BaseManager {
 	}
 	public final boolean existPlayer(String IP) {
 		return Players.containsKey(IP);
+	}
+	public final Collection<Player> getPlayers() {
+		return Players.values();
 	}
 	public final Player getPlayer(String IP) {
 		return Players.get(IP);
