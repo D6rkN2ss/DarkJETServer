@@ -16,6 +16,9 @@ import darkjet.server.network.minecraft.MinecraftIDs;
 import darkjet.server.network.minecraft.PingPacket;
 import darkjet.server.network.minecraft.PongPacket;
 import darkjet.server.network.minecraft.ServerHandshakePacket;
+import darkjet.server.network.minecraft.SetHealthPacket;
+import darkjet.server.network.minecraft.SetSpawnPositionPacket;
+import darkjet.server.network.minecraft.SetTimePacket;
 import darkjet.server.network.minecraft.StartGamePacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket.ACKPacket;
@@ -145,6 +148,16 @@ public final class Player {
 					
 					StartGamePacket startgame = new StartGamePacket(new Vector(128, 4, 128), new Vector(128, 4, 128), 1, 0L, 0);
 					Queue.addMinecraftPacket(startgame);
+					
+					SetTimePacket stp = new SetTimePacket(0);
+					Queue.addMinecraftPacket(stp);
+					
+					SetSpawnPositionPacket sspp = new SetSpawnPositionPacket( new Vector(128, 4, 128) );
+					Queue.addMinecraftPacket(sspp);
+					
+					SetHealthPacket shp = new SetHealthPacket((byte) 0x20);
+					Queue.addMinecraftPacket(shp);
+					
 					break;
 			}
 		}
