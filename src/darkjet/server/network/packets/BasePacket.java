@@ -54,4 +54,10 @@ public abstract class BasePacket {
 	public byte[] getResponse() {
 		throw new RuntimeException("Didn't support getResponse");
 	}
+	
+	public final String getString(){
+		byte[] text = new byte[bb.getShort()];
+		bb.get(text);
+		return new String(text);
+	}
 }
