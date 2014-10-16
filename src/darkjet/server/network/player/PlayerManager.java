@@ -19,8 +19,8 @@ public final class PlayerManager extends BaseManager {
 	public final boolean existPlayer(String IP) {
 		return Players.containsKey(IP);
 	}
-	public final Player getPlayer(Player player) {
-		return Players.get(player);
+	public final Player getPlayer(String IP) {
+		return Players.get(IP);
 	}
 	public final void removePlayer(String IP) {
 		Players.remove(IP);
