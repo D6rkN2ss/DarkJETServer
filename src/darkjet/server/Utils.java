@@ -8,8 +8,8 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
-import java.util.zip.Deflater;
-
+import java.util.zip.DeflaterOutputStream;
+import java.util.zip.Inflater;
 import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
 
 /**
@@ -88,20 +88,31 @@ public class Utils{
 	 * @return compressed Byte
 	 * @author Blue Electric
 	 */
-	public final static byte[] compressByte(byte[] compress) {
-		Deflater deflater = new Deflater(8);
-		deflater.setInput( compress );
-		deflater.finish();
-		if(deflater.finished()) {
-			throw new RuntimeException("Length unexpectedly 0, Written Bytes: " + deflater.getBytesWritten());
+	public final static byte[] compressByte(byte[] compress) throws Exception {
+		return compressByte( new byte[][]{compress} );
+	}
+	
+	public final static byte[] compressByte(byte[]... compress) throws Exception {
+		ByteOutputStream bos = new ByteOutputStream();
+		DeflaterOutputStream dos = new DeflaterOutputStream( bos );
+		for(byte[] ba : compress) {
+			dos.write(ba);
 		}
+		dos.close();
+		bos.close();
+		return bos.getBytes();
+	}
+	
+	public final static byte[] decompressByte( byte[] decompress ) throws Exception {
+		Inflater inflater = new Inflater();
+		inflater.setInput(decompress);
 		ByteOutputStream bos = new ByteOutputStream();
 		byte[] buf = new byte[1024];
-		while( !deflater.finished() ) {
-			int count = deflater.deflate(buf);
+		while( !inflater.finished() ) {
+			int count = inflater.inflate(buf);
 			bos.write(buf, 0, count);
 		}
-		deflater.end();
+		inflater.end();
 		buf = bos.getBytes();
 		bos.close();
 		return buf;

@@ -46,11 +46,14 @@ public final class FullChunkDataPacket extends BaseMinecraftPacket {
 	@Override
 	public byte[] getResponse() {
 		byte[] chunkBuf = SUPERFLAT;
-		ByteBuffer bb = ByteBuffer.allocate( Integer.BYTES * 2 + chunkBuf.length );
-		bb.put( Utils.LInt( chunkX ) ); bb.put( Utils.LInt( chunkZ ) );
-		bb.put( chunkBuf );
 		
-		byte[] compressed = Utils.compressByte( bb.array() );
+		byte[] compressed;
+		try {
+			compressed = Utils.compressByte( Utils.LInt(chunkX), Utils.LInt(chunkZ),chunkBuf );
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
 		bb = ByteBuffer.allocate( 1 + compressed.length );
 		bb.put( MinecraftIDs.FULL_CHUNK_DATA_PACKET );
 		bb.put(compressed);
