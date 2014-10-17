@@ -44,28 +44,33 @@ public final class MinecraftDataPacket extends BasePacket {
 			ByteBuffer bb = ByteBuffer.wrap(buffer);
 			ArrayList<InternalDataPacket> list = new ArrayList<>();
 			while(bb.position() < bb.capacity()) {
-				InternalDataPacket pck = new InternalDataPacket();
-				byte flag = bb.get();
-				pck.reliability = (byte) (flag >> 5);
-				pck.hasSplit = (flag & 0b00010000) == 16;
-				int length = ((bb.getShort() + 7) >> 3); // The Length is in bits, so Bits to Bytes conversion
-				if(pck.reliability == 2 || pck.reliability == 3 || pck.reliability == 4 || pck.reliability == 6 || pck.reliability == 7){
-					pck.messageIndex = Utils.getLTriad(buffer, bb.position());
-					bb.position(bb.position() + 3);
+				try {
+					InternalDataPacket pck = new InternalDataPacket();
+					byte flag = bb.get();
+					pck.reliability = (byte) ((flag & 0b11100000) >> 5);
+					pck.hasSplit = (flag & 0b00010000) > 0;
+					int length = (int) Math.ceil(bb.getShort() / 8);
+					if(pck.reliability == 2 || pck.reliability == 3 || pck.reliability == 4 || pck.reliability == 6 || pck.reliability == 7){
+						pck.messageIndex = Utils.getLTriad(buffer, bb.position());
+						bb.position(bb.position() + 3);
+					}
+					if(pck.reliability == 1 || pck.reliability == 3 || pck.reliability == 4 || pck.reliability == 7){
+						pck.orderIndex = Utils.getLTriad(buffer, bb.position());
+						bb.position(bb.position() + 3);
+						pck.orderChannel = bb.get();
+					}
+					if(pck.hasSplit){
+						pck.splitCount = bb.getInt();
+						pck.splitID = bb.getShort();
+						pck.splitIndex = bb.getInt();
+					}
+					pck.buffer = new byte[length];
+					bb.get(pck.buffer);
+					list.add(pck);
+				} catch (Exception e) {
+					//e.printStackTrace();
+					break;
 				}
-				if(pck.reliability == 1 || pck.reliability == 3 || pck.reliability == 4 || pck.reliability == 7){
-					pck.orderIndex = Utils.getLTriad(buffer, bb.position());
-					bb.position(bb.position() + 3);
-					pck.orderChannel = bb.get();
-				}
-				if(pck.hasSplit){
-					pck.splitCount = bb.getInt();
-					pck.splitID = bb.getShort();
-					pck.splitIndex = bb.getInt();
-				}
-				pck.buffer = new byte[length];
-				bb.get(pck.buffer);
-				list.add(pck);
 			}
 			InternalDataPacket[] result = new InternalDataPacket[list.size()];
 			list.toArray(result);
