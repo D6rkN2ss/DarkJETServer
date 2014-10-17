@@ -52,4 +52,11 @@ public final class TaskManager extends BaseManager {
 			}
 		}
 	}
+
+	@Override
+	public void onClose() {
+		while( worker.isAlive() ) {
+			worker.interrupt();
+		}
+	}
 }

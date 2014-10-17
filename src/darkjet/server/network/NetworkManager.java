@@ -14,5 +14,8 @@ public final class NetworkManager extends BaseManager {
 		super(leader);
 		server = new UDPServer(this);
 	}
-
+	@Override
+	public void onClose() {
+		
+	}
 }

@@ -30,4 +30,8 @@ public final class PlayerManager extends BaseManager {
 		Players.remove(IP);
 	}
 
+	@Override
+	public void onClose() {
+		
+	}
 }

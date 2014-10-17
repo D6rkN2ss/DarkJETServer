@@ -18,4 +18,9 @@ public final class ChatManager extends BaseManager {
 			}
 		}
 	}
+
+	@Override
+	public void onClose() {
+		
+	}
 }

@@ -26,10 +26,15 @@ public final class Leader {
 		startTime = System.currentTimeMillis();
 	}
 	
-	public static class BaseManager {
+	public abstract static class BaseManager {
 		public final Leader leader;
 		public BaseManager(Leader leader) {
 			this.leader = leader;
 		}
+		
+		/**
+		 * Server is Closing
+		 */
+		public abstract void onClose();
 	}
 }
