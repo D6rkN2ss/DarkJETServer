@@ -59,4 +59,9 @@ public final class TaskManager extends BaseManager {
 			worker.interrupt();
 		}
 	}
+
+	@Override
+	public void Init() {
+		
+	}
 }

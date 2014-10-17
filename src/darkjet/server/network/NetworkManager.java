@@ -18,4 +18,8 @@ public final class NetworkManager extends BaseManager {
 	public void onClose() {
 		
 	}
+	@Override
+	public void Init() {
+		
+	}
 }

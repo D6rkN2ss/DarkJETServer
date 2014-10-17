@@ -21,11 +21,11 @@ public final class Leader {
 	public final long startTime;
 	
 	public Leader() {
-		network = new NetworkManager(this);
-		player = new PlayerManager(this);
-		task = new TaskManager(this);
-		chat = new ChatManager(this);
-		level = new LevelManager(this);
+		network = new NetworkManager(this); network.Init();
+		player = new PlayerManager(this); player.Init();
+		task = new TaskManager(this); task.Init();
+		chat = new ChatManager(this); chat.Init();
+		level = new LevelManager(this); level.Init();
 		
 		startTime = System.currentTimeMillis();
 	}
@@ -36,6 +36,10 @@ public final class Leader {
 			this.leader = leader;
 		}
 		
+		/**
+		 * Startup actions
+		 */
+		public abstract void Init();
 		/**
 		 * Server is Closing
 		 */
