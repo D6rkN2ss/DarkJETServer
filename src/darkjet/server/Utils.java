@@ -99,8 +99,9 @@ public class Utils{
 			dos.write(ba);
 		}
 		dos.close();
+		byte[] buf = bos.getBytes();
 		bos.close();
-		return bos.getBytes();
+		return buf;
 	}
 	
 	public final static byte[] decompressByte( byte[] decompress ) throws Exception {
