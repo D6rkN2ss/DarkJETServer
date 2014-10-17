@@ -1,6 +1,6 @@
 package darkjet.server.math;
 
-public final class Vector {
+public class Vector {
 	private int x, y, z;
 
 	public Vector(int v){
