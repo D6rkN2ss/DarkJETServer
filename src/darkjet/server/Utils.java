@@ -2,12 +2,14 @@ package darkjet.server;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 import java.util.zip.Deflater;
+
 import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
 
 /**
@@ -40,6 +42,23 @@ public class Utils{
 		} catch (Exception e) {
 			e.printStackTrace();
 			return null;
+		}
+	}
+	
+	/**
+	 * Write Bytes to File
+	 * @param bs Byte Array to Write
+	 * @param file File to Write
+	 * @return OK?
+	 */
+	public final static boolean WriteByteArraytoFile(byte[] bs, File file) {
+		try {
+			FileOutputStream fos = new FileOutputStream(file);
+			fos.write(bs); fos.close();
+			return true;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
 		}
 	}
 	
