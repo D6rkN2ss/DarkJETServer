@@ -47,7 +47,7 @@ public final class FullChunkDataPacket extends BaseMinecraftPacket {
 	public byte[] getResponse() {
 		byte[] chunkBuf = SUPERFLAT;
 		ByteBuffer bb = ByteBuffer.allocate( Integer.BYTES * 2 + chunkBuf.length );
-		bb.put( LInt( chunkX ) ); bb.put( LInt( chunkZ ) );
+		bb.put( Utils.LInt( chunkX ) ); bb.put( Utils.LInt( chunkZ ) );
 		bb.put( chunkBuf );
 		
 		byte[] compressed = Utils.compressByte( bb.array() );
@@ -57,15 +57,6 @@ public final class FullChunkDataPacket extends BaseMinecraftPacket {
 		return bb.array();
 	}
 	
-	private byte[] LInt(int i) {
-		ByteBuffer buffer = ByteBuffer.allocate(4);
-		buffer.putInt(i);
-		byte[] result = new byte[4];
-		result[0] = buffer.array()[3];
-		result[1] = buffer.array()[2];
-		result[2] = buffer.array()[1];
-		result[3] = buffer.array()[0];
-		return result;
-	}
+
 	
 }
