@@ -1,5 +1,6 @@
 package darkjet.server;
 
+import darkjet.server.level.LevelManager;
 import darkjet.server.network.NetworkManager;
 import darkjet.server.network.player.PlayerManager;
 import darkjet.server.network.player.chat.ChatManager;
@@ -15,6 +16,8 @@ public final class Leader {
 	public final PlayerManager player;
 	public final TaskManager task;
 	public final ChatManager chat;
+	public final LevelManager level;
+	
 	public final long startTime;
 	
 	public Leader() {
@@ -22,6 +25,7 @@ public final class Leader {
 		player = new PlayerManager(this);
 		task = new TaskManager(this);
 		chat = new ChatManager(this);
+		level = new LevelManager(this);
 		
 		startTime = System.currentTimeMillis();
 	}
