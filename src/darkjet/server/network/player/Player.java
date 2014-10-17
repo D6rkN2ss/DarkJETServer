@@ -159,6 +159,7 @@ public final class Player {
 		}
 		ACKQueue.add(MDP.sequenceNumber);
 		for(InternalDataPacket ipck : MDP.packets){
+			if(ipck.buffer.length == 0) { continue; }
 			switch( ipck.buffer[0] ) {
 				case MinecraftIDs.PING:
 					PingPacket ping = new PingPacket(); ping.parse(ipck.buffer);
