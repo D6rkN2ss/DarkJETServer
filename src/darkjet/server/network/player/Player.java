@@ -4,10 +4,12 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-
 import darkjet.server.Leader;
 import darkjet.server.Utils;
+import darkjet.server.level.Level;
+import darkjet.server.level.chunk.Chunk;
 import darkjet.server.math.Vector;
+import darkjet.server.math.Vector2;
 import darkjet.server.network.minecraft.BaseMinecraftPacket;
 import darkjet.server.network.minecraft.ClientConnectPacket;
 import darkjet.server.network.minecraft.ClientHandshakePacket;
@@ -54,6 +56,8 @@ public final class Player {
 	
 	private final ChunkSender chunkSender;
 	
+	private Level level;
+	
 	public Player(Leader leader, String IP, int port, short mtu, long clientID) throws Exception {
 		this.leader = leader;
 		this.IP = IP;
@@ -66,6 +70,8 @@ public final class Player {
 		recoveryQueue = new HashMap<Integer, byte[]>();
 		
 		Queue = new InternalDataPacketQueue(1536);
+		
+		level = leader.level.getLoadedLevel("world");
 		
 		leader.task.addTask( new MethodTask(-1, 10, this, "update") );
 		chunkSender = new ChunkSender();
@@ -87,36 +93,61 @@ public final class Player {
 	
 	//Internal Part
 	private final class ChunkSender extends Thread {
+		public final HashMap<Vector2, Chunk> useChunks = new HashMap<>();
+		
+		HashMap<Integer, ArrayList<Vector2>> MapOrder = new HashMap<>();
+		HashMap<Vector2, Boolean> requestChunks = new HashMap<>();
+		ArrayList<Integer> orders = new ArrayList<>();
+		
 		@Override
 		public final void run() {
-			int centerX = 128/16;
-			int centerZ = 128/16;
-			int radius = 4;
-			
-			HashMap<Integer, ArrayList<Vector>> MapOrder = new HashMap<>();
-			ArrayList<Integer> orders = new ArrayList<>();
-			
-			for (int x = -radius; x <= radius; ++x) {
-				for (int z = -radius; z <= radius; ++z) {
-					int distance = (x*x) + (z*z);
-					int chunkX = x + centerX;
-					int chunkZ = z + centerZ;
-					if( !MapOrder.containsKey( distance ) ) {
-						MapOrder.put(distance, new ArrayList<Vector>());
+			while ( !isInterrupted() ) {
+				int centerX = 128/16;
+				int centerZ = 128/16;
+				int radius = 4;
+				
+				MapOrder.clear(); requestChunks.clear(); orders.clear();
+				
+				for (int x = -radius; x <= radius; ++x) {
+					for (int z = -radius; z <= radius; ++z) {
+						int distance = (x*x) + (z*z);
+						int chunkX = x + centerX;
+						int chunkZ = z + centerZ;
+						if( !MapOrder.containsKey( distance ) ) {
+							MapOrder.put(distance, new ArrayList<Vector2>());
+						}
+						requestChunks.put(new Vector2(chunkX, chunkZ), true);
+						MapOrder.get(distance).add( new Vector2(chunkX, chunkZ) );
+						orders.add(distance);
 					}
-					MapOrder.get(distance).add( new Vector(chunkX, 0, chunkZ) );
-					orders.add(distance);
 				}
-			}
-			Collections.sort(orders);
-			
-			for( Integer i : orders ) {
-				for( Vector v : MapOrder.get(i) ) {
-					try {
-						Queue.addMinecraftPacket( new FullChunkDataPacket(v.getX(), v.getZ()) );
-					} catch (Exception e) {
-						e.printStackTrace();
+				Collections.sort(orders);
+
+				for( Integer i : orders ) {
+					for( Vector2 v : MapOrder.get(i) ) {
+						try {
+							if( useChunks.containsKey(v) ) { continue; }
+							useChunks.put(v, level.requestChunk(v));
+							Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(v) ) );
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
 					}
+				}
+				Vector2[] v2a = requestChunks.keySet().toArray(new Vector2[useChunks.keySet().size()] );
+				for( int i = 0; i < v2a.length; i++ ) {
+					Vector2 v = v2a[i];
+					if( !useChunks.containsKey( v2a ) ) {
+						level.releaseChunk(v);
+						useChunks.remove(v);
+						i--;
+					}
+				}
+				
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {
+					
 				}
 			}
 		}
