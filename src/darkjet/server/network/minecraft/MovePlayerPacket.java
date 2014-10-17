@@ -27,7 +27,7 @@ public final class MovePlayerPacket extends BaseMinecraftPacket {
 		yaw = bb.getFloat();
 		pitch = bb.getFloat();
 		bodyYaw = bb.getFloat();
-		isTeleport = ((bb.get() & 0x80) > 0);
+		//isTeleport = ((bb.get() & 0x80) > 0);
 	}
 
 	@Override

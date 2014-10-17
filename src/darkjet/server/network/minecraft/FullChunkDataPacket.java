@@ -1,8 +1,6 @@
 package darkjet.server.network.minecraft;
 
 import java.nio.ByteBuffer;
-
-import darkjet.server.Utils;
 import darkjet.server.level.chunk.Chunk;
 
 public final class FullChunkDataPacket extends BaseMinecraftPacket {

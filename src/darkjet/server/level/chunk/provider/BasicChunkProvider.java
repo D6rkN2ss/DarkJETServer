@@ -95,23 +95,21 @@ public class BasicChunkProvider extends ChunkProvider {
 	
 	public final static class BasicChunk extends Chunk {
 		protected boolean touched = false; //touched by Provider
-		protected boolean saveDirectly = false; //Flags for Just Generated Chunk
 		protected byte[] compressBuffer;
+		public final boolean JustGenerated;
 		
 		public BasicChunk(int x, int z) {
 			this(x, z, false);
 		}
 		
-		public BasicChunk(int x, int z, boolean saveDirectly) {
+		public BasicChunk(int x, int z, boolean JustGenerated) {
 			super(x, z);
-			this.saveDirectly = saveDirectly;
+			this.JustGenerated = JustGenerated;
 		}
 		
 		@Override
 		public byte[] getCompressed() {
-			if( touched && (wasModify || saveDirectly) ) {
-				saveDirectly = false;
-				wasModify = false;
+			if( (touched && wasModify) || JustGenerated) {
 				compressBuffer = super.getCompressed();
 			}
 			return compressBuffer;

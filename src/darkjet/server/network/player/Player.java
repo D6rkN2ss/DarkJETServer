@@ -18,6 +18,7 @@ import darkjet.server.network.minecraft.LoginPacket;
 import darkjet.server.network.minecraft.LoginStatusPacket;
 import darkjet.server.network.minecraft.MessagePacket;
 import darkjet.server.network.minecraft.MinecraftIDs;
+import darkjet.server.network.minecraft.MovePlayerPacket;
 import darkjet.server.network.minecraft.PingPacket;
 import darkjet.server.network.minecraft.PongPacket;
 import darkjet.server.network.minecraft.ServerHandshakePacket;
@@ -46,6 +47,8 @@ public final class Player {
 	
 	public String name;
 	
+	public float x, y, z;
+	
 	private int lastSequenceNum = 0;
 	
 	private ArrayList<Integer> ACKQueue; // Received packet queue
@@ -55,8 +58,14 @@ public final class Player {
 	private final InternalDataPacketQueue Queue;
 	
 	private final ChunkSender chunkSender;
+	public final HashMap<Vector2, Chunk> getUsingChunks() {
+		return chunkSender.useChunks;
+	}
 	
-	private Level level;
+	protected Level level;
+	public final Level getLevel() {
+		return level;
+	}
 	
 	public Player(Leader leader, String IP, int port, short mtu, long clientID) throws Exception {
 		this.leader = leader;
@@ -64,6 +73,8 @@ public final class Player {
 		this.port = port;
 		this.mtu = mtu;
 		this.clientID = clientID;
+		
+		x = 128F; y = 4F; z = 128F;
 		
 		ACKQueue = new ArrayList<Integer>();
 		NACKQueue = new ArrayList<Integer>();
@@ -95,15 +106,29 @@ public final class Player {
 	private final class ChunkSender extends Thread {
 		public final HashMap<Vector2, Chunk> useChunks = new HashMap<>();
 		
-		HashMap<Integer, ArrayList<Vector2>> MapOrder = new HashMap<>();
-		HashMap<Vector2, Boolean> requestChunks = new HashMap<>();
-		ArrayList<Integer> orders = new ArrayList<>();
+		private final HashMap<Integer, ArrayList<Vector2>> MapOrder = new HashMap<>();
+		private final HashMap<Vector2, Boolean> requestChunks = new HashMap<>();
+		private final ArrayList<Integer> orders = new ArrayList<>();
+		
+		public boolean first = true;
+		public int lastCX = 0, lastCZ = 0;
 		
 		@Override
 		public final void run() {
 			while ( !isInterrupted() ) {
-				int centerX = 128/16;
-				int centerZ = 128/16;
+				int centerX = (int) Math.floor(x)/16;
+				int centerZ = (int) Math.floor(z)/16;
+				
+				try {
+					if( centerX == lastCX && centerZ == lastCZ && !first ) {
+						Thread.sleep(100);
+						continue;
+					}
+				} catch (InterruptedException e) {
+					continue;
+				}
+				first = false;
+				lastCX = centerX; lastCZ = centerZ;
 				int radius = 4;
 				
 				MapOrder.clear(); requestChunks.clear(); orders.clear();
@@ -140,7 +165,6 @@ public final class Player {
 					if( !useChunks.containsKey( v2a ) ) {
 						level.releaseChunk(v);
 						useChunks.remove(v);
-						i--;
 					}
 				}
 				
@@ -154,25 +178,29 @@ public final class Player {
 	}
 	
 	public final void update() throws Exception {
-		if(this.ACKQueue.size() > 0){
-			int[] array = new int[this.ACKQueue.size()];
-			int offset = 0;
-			for(Integer i: ACKQueue){
-				array[offset++] = i;
+		synchronized (ACKQueue) {
+			if(this.ACKQueue.size() > 0){
+				int[] array = new int[this.ACKQueue.size()];
+				int offset = 0;
+				for(Integer i: ACKQueue){
+					array[offset++] = i;
+				}
+				ACKPacket pck = new ACKPacket();
+				pck.sequenceNumbers = array;
+				leader.network.server.sendTo( pck.getResponse() , IP, port);
 			}
-			ACKPacket pck = new ACKPacket();
-			pck.sequenceNumbers = array;
-			leader.network.server.sendTo( pck.getResponse() , IP, port);
 		}
-		if(NACKQueue.size() > 0){
-			int[] array = new int[NACKQueue.size()];
-			int offset = 0;
-			for(Integer i: NACKQueue){
-				array[offset++] = i;
+		synchronized (NACKQueue) {
+			if(NACKQueue.size() > 0){
+				int[] array = new int[NACKQueue.size()];
+				int offset = 0;
+				for(Integer i: NACKQueue){
+					array[offset++] = i;
+				}
+				NACKPacket pck = new NACKPacket();
+				pck.sequenceNumbers = array;
+				leader.network.server.sendTo( pck.getResponse() , IP, port);
 			}
-			NACKPacket pck = new NACKPacket();
-			pck.sequenceNumbers = array;
-			leader.network.server.sendTo( pck.getResponse() , IP, port);
 		}
 		if( !Queue.isEmpty() ) {
 			Queue.send();
@@ -185,10 +213,14 @@ public final class Player {
 		}
 		else{
 			for(int i = this.lastSequenceNum; i < MDP.sequenceNumber; ++i){
-				NACKQueue.add(i);
+				synchronized (NACKQueue) {
+					NACKQueue.add(i);
+				}
 			}
 		}
-		ACKQueue.add(MDP.sequenceNumber);
+		synchronized (ACKQueue) {
+			ACKQueue.add(MDP.sequenceNumber);
+		}
 		for(InternalDataPacket ipck : MDP.packets){
 			if(ipck.buffer.length == 0) { continue; }
 			switch( ipck.buffer[0] ) {
@@ -248,6 +280,13 @@ public final class Player {
 					MessagePacket message = new MessagePacket();
 					message.parse( ipck.buffer );
 					leader.chat.handleChat( this, message.getMessage() );
+					break;
+				case MinecraftIDs.MOVE_PLAYER:
+					MovePlayerPacket movePlayer = new MovePlayerPacket();
+					movePlayer.parse( ipck.buffer );
+					x = movePlayer.x;
+					y = movePlayer.y;
+					z = movePlayer.z;
 					break;
 			}
 		}
