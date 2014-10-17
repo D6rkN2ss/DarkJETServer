@@ -15,6 +15,16 @@ import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
  * @author BlockServer
  */
 public class Utils{
+	public static void recursiveDelete(File file) {
+	    if( !file.exists() ) { return; }
+	    if (file.isDirectory()) {
+	        for (File f : file.listFiles()) {
+		        recursiveDelete(f);
+		    }
+		}
+		file.delete();
+	}
+	
 	/**
 	 * File to ByteArray
 	 * @param file File to Read
