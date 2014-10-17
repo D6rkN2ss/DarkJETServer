@@ -6,18 +6,33 @@ import java.util.HashMap;
 import darkjet.server.Leader;
 import darkjet.server.Leader.BaseManager;
 import darkjet.server.Utils;
+import darkjet.server.level.chunk.ChunkGenerator;
 import darkjet.server.level.chunk.ChunkProvider;
+import darkjet.server.level.chunk.generator.FlatChunkGenerator;
+import darkjet.server.level.chunk.provider.BasicChunkProvider;
 
 public final class LevelManager extends BaseManager {
 	//<Name, Player>
 	private HashMap<String, Level> Levels = new HashMap<>();
-	public Class<ChunkProvider> DefaultProvider = null;
-	public HashMap<String, Class<ChunkProvider>> Providers = new HashMap<>();
+	public Class<?> DefaultProvider = null;
+	public HashMap<String, Class<?>> Providers = new HashMap<>();
 	
 	public static final File levelFolder = new File(".", "level");
 	
 	public LevelManager(Leader leader) {
 		super(leader);
+		
+		DefaultProvider = BasicChunkProvider.class;
+		Providers.put("Basic", BasicChunkProvider.class);
+	}
+	
+	@Override
+	public final void Init() {
+		if( !isExist("world") ) {
+			createLevel("world");
+		} else {
+			loadLevel("world");
+		}
 	}
 
 	/**
@@ -28,13 +43,18 @@ public final class LevelManager extends BaseManager {
 	public final boolean createLevel(String Name) {
 		if( isExist(Name) ) { return false; }
 		try {
-			Level level = new Level(leader, Name, DefaultProvider.newInstance());
+			Level level = new Level(leader, Name);
+			level.provider = (ChunkProvider) DefaultProvider.getDeclaredConstructor(Level.class, ChunkGenerator.class).newInstance(level, getDefaultGenerator() );
 			level.save();
 			Levels.put(Name, level);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return true;
+	}
+	
+	public final ChunkGenerator getDefaultGenerator() {
+		return new FlatChunkGenerator();
 	}
 	
 	/**
@@ -66,6 +86,11 @@ public final class LevelManager extends BaseManager {
 	
 	public final boolean isExist(String Name) {
 		return getLevelPath(Name).isDirectory();
+	}
+	
+	public final Level getLoadedLevel(String Name) {
+		if( !isLoaded(Name) ) { return null; }
+		return Levels.get(Name);
 	}
 	
 	/**
