@@ -24,4 +24,12 @@ public class Vector2 {
 	public void setZ(int v){
 		this.z = v;
 	}
+	@Override
+	public boolean equals(Object obj) {
+		if( !(obj instanceof Vector2) ) { return false; }
+		Vector2 v2 = (Vector2) obj;
+		return x == v2.x && z == v2.z;
+	}
+	
+	
 }
