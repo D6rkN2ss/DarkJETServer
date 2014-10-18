@@ -84,8 +84,6 @@ public final class Player extends Entity {
 		Queue = new InternalDataPacketQueue(1536);
 		
 		level = leader.level.getLoadedLevel("world");
-		
-		leader.task.addTask( new MethodTask(-1, 10, this, "update") );
 		chunkSender = new ChunkSender();
 	}
 	
@@ -120,77 +118,79 @@ public final class Player extends Entity {
 		public final void run() {
 			while ( !isInterrupted() ) {
 				try {
-					int centerX = (int) Math.floor(x) >> 4;
-					int centerZ = (int) Math.floor(z) >> 4;
-					
-					if( refreshAllUsed ) {
-						for( Chunk chunk : useChunks.values() ) {
-							Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(chunk) ) );
-						}
-						refreshAllUsed = false;
-						continue;
-					}
-					
-					if( centerX == lastCX && centerZ == lastCZ && !first ) {
-						Thread.sleep(100);
-						continue;
-					}
-					System.out.println("FullChunk for " + centerX + "," + centerZ);
-					lastCX = centerX; lastCZ = centerZ;
-					int radius = 4;
-					
-					MapOrder.clear(); requestChunks.clear(); orders.clear();
-					
-					for (int x = -radius; x <= radius; ++x) {
-						for (int z = -radius; z <= radius; ++z) {
-							int distance = (x*x) + (z*z);
-							int chunkX = x + centerX;
-							int chunkZ = z + centerZ;
-							if( !MapOrder.containsKey( distance ) ) {
-								MapOrder.put(distance, new ArrayList<Vector2>());
+					synchronized (Queue) {
+						int centerX = (int) Math.floor(x) >> 4;
+						int centerZ = (int) Math.floor(z) >> 4;
+						
+						if( refreshAllUsed ) {
+							for( Chunk chunk : useChunks.values() ) {
+								Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(chunk) ) );
 							}
-							requestChunks.put(new Vector2(chunkX, chunkZ), true);
-							MapOrder.get(distance).add( new Vector2(chunkX, chunkZ) );
-							orders.add(distance);
+							refreshAllUsed = false;
+							continue;
 						}
-					}
-					Collections.sort(orders);
-	
-					int sendCount = 0;
-					for( Integer i : orders ) {
-						for( Vector2 v : MapOrder.get(i) ) {
-							try {
-								if(sendCount == 56 && first) {
-									System.out.println( "Player " + name + " is ready to play!" );
-									InitPlayer();
+						
+						if( centerX == lastCX && centerZ == lastCZ && !first ) {
+							Thread.sleep(100);
+							continue;
+						}
+						System.out.println("FullChunk for " + centerX + "," + centerZ);
+						lastCX = centerX; lastCZ = centerZ;
+						int radius = 4;
+						
+						MapOrder.clear(); requestChunks.clear(); orders.clear();
+						
+						for (int x = -radius; x <= radius; ++x) {
+							for (int z = -radius; z <= radius; ++z) {
+								int distance = (x*x) + (z*z);
+								int chunkX = x + centerX;
+								int chunkZ = z + centerZ;
+								if( !MapOrder.containsKey( distance ) ) {
+									MapOrder.put(distance, new ArrayList<Vector2>());
 								}
-								if( useChunks.containsKey(v) ) { continue; }
-								useChunks.put(v, level.requestChunk(v));
-								Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(v) ) );
-								//Resend in First Chunk Sending
-								//TODO: Minecraft Error?
-								if( first ) {
-									useChunks.remove(v);
-								} else if ( firstReloader ) {
-									level.releaseChunk(v);
-								}
-								sendCount++;
-							} catch (Exception e) {
-								e.printStackTrace();
+								requestChunks.put(new Vector2(chunkX, chunkZ), true);
+								MapOrder.get(distance).add( new Vector2(chunkX, chunkZ) );
+								orders.add(distance);
 							}
 						}
-					}
-					Vector2[] v2a = useChunks.keySet().toArray(new Vector2[useChunks.keySet().size()] );
-					for( int i = 0; i < v2a.length; i++ ) {
-						Vector2 v = v2a[i];
-						if( !requestChunks.containsKey( v ) ) {
-							level.releaseChunk(v);
-							useChunks.remove(v);
+						Collections.sort(orders);
+		
+						int sendCount = 0;
+						for( Integer i : orders ) {
+							for( Vector2 v : MapOrder.get(i) ) {
+								try {
+									if(sendCount == 56 && first) {
+										System.out.println( "Player " + name + " is ready to play!" );
+										InitPlayer();
+									}
+									if( useChunks.containsKey(v) ) { continue; }
+									useChunks.put(v, level.requestChunk(v));
+									Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(v) ) );
+									//Resend in First Chunk Sending
+									//TODO: Minecraft Error?
+									if( first ) {
+										useChunks.remove(v);
+									} else if ( firstReloader ) {
+										level.releaseChunk(v);
+									}
+									sendCount++;
+								} catch (Exception e) {
+									e.printStackTrace();
+								}
+							}
 						}
+						Vector2[] v2a = useChunks.keySet().toArray(new Vector2[useChunks.keySet().size()] );
+						for( int i = 0; i < v2a.length; i++ ) {
+							Vector2 v = v2a[i];
+							if( !requestChunks.containsKey( v ) ) {
+								level.releaseChunk(v);
+								useChunks.remove(v);
+							}
+						}
+						if( firstReloader ) { firstReloader = false; }
+						if( first ) { firstReloader = true; }
+						first = false;
 					}
-					if( firstReloader ) { firstReloader = false; }
-					if( first ) { firstReloader = true; }
-					first = false;
 					Thread.sleep(100);
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -201,6 +201,7 @@ public final class Player extends Entity {
 	
 	@Override
 	public final void update() throws Exception {
+		super.update();
 		synchronized (ACKQueue) {
 			if(this.ACKQueue.size() > 0){
 				int[] array = new int[this.ACKQueue.size()];
@@ -247,8 +248,7 @@ public final class Player extends Entity {
 		//Take exist player for this
 		for( Player p : leader.player.getPlayers() ) {
 			if( p == this ) { continue; }
-			p.Queue.addMinecraftPacket( new AddPlayerPacket(this) );
-			p.sendChat("Player" + name + " is Connected");
+			Queue.addMinecraftPacket( new AddPlayerPacket(p) );
 		}
 	}
 
@@ -333,6 +333,9 @@ public final class Player extends Entity {
 					x = movePlayer.x;
 					y = movePlayer.y;
 					z = movePlayer.z;
+					yaw = movePlayer.yaw;
+					pitch = movePlayer.pitch;
+					bodyYaw = movePlayer.bodyYaw;
 					break;
 			}
 		}
