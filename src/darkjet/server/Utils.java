@@ -109,7 +109,7 @@ public class Utils{
 	}
 	public final static byte[] decompressByte( byte[] decompress, int startInx ) throws Exception {
 		Inflater inflater = new Inflater();
-		inflater.setInput(decompress, 1, decompress.length-1);
+		inflater.setInput(decompress, startInx, decompress.length-startInx);
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		byte[] buf = new byte[1024];
 		while( !inflater.finished() ) {
