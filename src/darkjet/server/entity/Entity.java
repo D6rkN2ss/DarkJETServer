@@ -16,7 +16,7 @@ public abstract class Entity {
 		this.EID = EID;
 		
 		try {
-			leader.task.addTask( new MethodTask(-1, 5, this, "update") );
+			leader.task.addTask( new MethodTask(-1, 2, this, "update") );
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -28,7 +28,7 @@ public abstract class Entity {
 				MovePlayerPacket mpp = new MovePlayerPacket(EID, x, y, z, yaw, pitch, bodyYaw, false);
 				leader.player.broadcastPacket(mpp, (Player) this);
 			}
-			lastX = x; lastY = y; lastZ = z;
+			lastX = x; lastY = y; lastZ = z; lastYaw = yaw; pitch = lastPitch; lastBodyYaw = bodyYaw;
 		}
 	}
 
