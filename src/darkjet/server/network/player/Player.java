@@ -2,8 +2,11 @@ package darkjet.server.network.player;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+
+import com.sun.xml.internal.ws.resources.SenderMessages;
 
 import darkjet.server.Leader;
 import darkjet.server.Utils;
@@ -12,6 +15,7 @@ import darkjet.server.level.chunk.Chunk;
 import darkjet.server.math.Vector;
 import darkjet.server.math.Vector2;
 import darkjet.server.math.Vectord;
+import darkjet.server.network.minecraft.AddPlayerPacket;
 import darkjet.server.network.minecraft.AdventureSettingPacket;
 import darkjet.server.network.minecraft.BaseMinecraftPacket;
 import darkjet.server.network.minecraft.ClientConnectPacket;
@@ -58,7 +62,7 @@ public final class Player {
 	private ArrayList<Integer> NACKQueue; // Not received packet queue
 	private HashMap<Integer, byte[]> recoveryQueue;
 	
-	private final InternalDataPacketQueue Queue;
+	protected final InternalDataPacketQueue Queue;
 	
 	private final ChunkSender chunkSender;
 	public final HashMap<Vector2, Chunk> getUsingChunks() {
@@ -143,7 +147,6 @@ public final class Player {
 					
 					MapOrder.clear(); requestChunks.clear(); orders.clear();
 					
-					
 					for (int x = -radius; x <= radius; ++x) {
 						for (int z = -radius; z <= radius; ++z) {
 							int distance = (x*x) + (z*z);
@@ -165,12 +168,7 @@ public final class Player {
 							try {
 								if(sendCount == 56 && first) {
 									System.out.println( "Player " + name + " is ready to play!" );
-									Queue.addMinecraftPacket( new SetTimePacket(0) );
-									MovePlayerPacket player = new MovePlayerPacket();
-									player.x = x; player.y = y; player.z = z;
-									Queue.addMinecraftPacket(player);
-									AdventureSettingPacket adp = new AdventureSettingPacket(0x20);
-									Queue.addMinecraftPacket(adp);
+									InitPlayer();
 								}
 								if( useChunks.containsKey(v) ) { continue; }
 								useChunks.put(v, level.requestChunk(v));
@@ -237,6 +235,28 @@ public final class Player {
 		}
 	}
 	
+	protected void InitPlayer() throws Exception {
+		Queue.addMinecraftPacket( new SetTimePacket(0) );
+		MovePlayerPacket player = new MovePlayerPacket();
+		player.x = x; player.y = y; player.z = z;
+		Queue.addMinecraftPacket(player);
+		AdventureSettingPacket adp = new AdventureSettingPacket(0x20);
+		Queue.addMinecraftPacket(adp);
+		
+		//Add player for other Player
+		AddPlayerPacket app = new AddPlayerPacket(Player.this);
+		leader.player.broadcastPacket(app, Player.this);
+		
+		sendChat("Welcome to DarkJET Server, " + name);
+		
+		//Take exist player for this
+		for( Player p : leader.player.getPlayers() ) {
+			if( p == this ) { continue; }
+			p.Queue.addMinecraftPacket( new AddPlayerPacket(this) );
+			p.sendChat("Player" + name + " is Connected");
+		}
+	}
+
 	public final void handlePacket(MinecraftDataPacket MDP) throws Exception {
 		if(MDP.sequenceNumber - this.lastSequenceNum == 1){
 			lastSequenceNum = MDP.sequenceNumber;
@@ -402,5 +422,33 @@ public final class Player {
 				reset();
 			}
 		}
+	}
+
+	public long getClientID() {
+		return clientID;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public float getX() {
+		return x;
+	}
+
+	public float getY() {
+		return y;
+	}
+
+	public float getZ() {
+		return z;
+	}
+
+	public byte getYaw() {
+		return 0;
+	}
+
+	public byte getPitch() {
+		return 0;
 	}
 }
