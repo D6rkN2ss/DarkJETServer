@@ -32,7 +32,7 @@ public final class MovePlayerPacket extends BaseMinecraftPacket {
 
 	@Override
 	public byte[] getResponse() {
-		bb = ByteBuffer.allocate( 2 + Integer.BYTES + (Float.BYTES * 6) );
+		bb = ByteBuffer.allocate( 2 + (0x04 * 7) );
 		bb.put(MinecraftIDs.MOVE_PLAYER);
 		bb.putInt(eid);
 		bb.putFloat(x);
@@ -45,6 +45,5 @@ public final class MovePlayerPacket extends BaseMinecraftPacket {
 		
 		return bb.array();
 	}
-	
 	
 }

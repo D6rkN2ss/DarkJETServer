@@ -15,7 +15,7 @@ public final class SetTimePacket extends BaseMinecraftPacket {
 
 	@Override
 	public byte[] getResponse() {
-		bb = ByteBuffer.allocate( 1 + Integer.BYTES + 1 );
+		bb = ByteBuffer.allocate( 2 + 0x04 );
 		bb.put( MinecraftIDs.SET_TIME );
 		bb.putInt( time );
 		//TODO 0x00
