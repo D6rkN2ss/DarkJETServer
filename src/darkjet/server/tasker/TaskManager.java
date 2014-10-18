@@ -22,7 +22,7 @@ public final class TaskManager extends BaseManager {
 	
 	public final class Worker extends Thread {
 		public int ctick;
-		public final int DEFAULT_SLEEP = 1000 / DEFAULT_TICK;
+		public static final int DEFAULT_SLEEP = 1000 / DEFAULT_TICK;
 		
 		@Override
 		public final void run() {
@@ -45,7 +45,9 @@ public final class TaskManager extends BaseManager {
 						task.delay = task.sdelay;
 					}
 					final int sleep = (int) ( DEFAULT_SLEEP - (int) (System.currentTimeMillis() - ST) );
-					sleep(sleep);
+					if( sleep > 0 ) {
+						sleep(sleep);
+					}
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
