@@ -25,12 +25,12 @@ public final class AddPlayerPacket extends BaseMinecraftPacket {
 	public AddPlayerPacket(Player player) {
 		clientID = player.getClientID();
 		username = player.getName();
-		EID = 0;
+		EID = player.getEID();
 		x = (float) player.getX();
 		y = (float) player.getY();
 		z = (float) player.getZ();
-		yaw = (byte) player.getYaw();
-		pitch = (byte) player.getPitch();
+		yaw = (byte) ( player.getYaw() * (250 / 360) );
+		pitch = (byte) (  player.getPitch() * ( 250 / 360) );
 	}
 	
 	@Override

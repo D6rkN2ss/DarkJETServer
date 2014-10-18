@@ -12,6 +12,17 @@ public final class MovePlayerPacket extends BaseMinecraftPacket {
 	public float bodyYaw;
 	public boolean isTeleport = false;
 	
+	public MovePlayerPacket() {
+		
+	}
+	
+	public MovePlayerPacket(int EID, float x, float y, float z, float yaw, float pitch, float bodyYaw, boolean isTeleport) {
+		this.eid = EID;
+		this.x = x; this.y = y; this.z = z;
+		this.yaw = yaw; this.pitch = pitch; this.bodyYaw = bodyYaw;
+		this.isTeleport = isTeleport;
+	}
+	
 	@Override
 	public int getPID() {
 		return MinecraftIDs.MOVE_PLAYER;
