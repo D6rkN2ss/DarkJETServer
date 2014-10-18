@@ -1,5 +1,6 @@
 package darkjet.server;
 
+import darkjet.server.entity.EntityManager;
 import darkjet.server.level.LevelManager;
 import darkjet.server.network.NetworkManager;
 import darkjet.server.network.player.PlayerManager;
@@ -17,6 +18,7 @@ public final class Leader {
 	public final TaskManager task;
 	public final ChatManager chat;
 	public final LevelManager level;
+	public final EntityManager entity;
 	
 	public final long startTime;
 	
@@ -26,6 +28,7 @@ public final class Leader {
 		task = new TaskManager(this); task.Init();
 		chat = new ChatManager(this); chat.Init();
 		level = new LevelManager(this); level.Init();
+		entity = new EntityManager(this); entity.Init();
 		
 		startTime = System.currentTimeMillis();
 	}
