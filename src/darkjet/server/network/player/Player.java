@@ -2,19 +2,16 @@ package darkjet.server.network.player;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 
-import com.sun.xml.internal.ws.resources.SenderMessages;
-
 import darkjet.server.Leader;
 import darkjet.server.Utils;
+import darkjet.server.entity.Entity;
 import darkjet.server.level.Level;
 import darkjet.server.level.chunk.Chunk;
 import darkjet.server.math.Vector;
 import darkjet.server.math.Vector2;
-import darkjet.server.math.Vectord;
 import darkjet.server.network.minecraft.AddPlayerPacket;
 import darkjet.server.network.minecraft.AdventureSettingPacket;
 import darkjet.server.network.minecraft.BaseMinecraftPacket;
@@ -45,16 +42,13 @@ import darkjet.server.tasker.MethodTask;
  * Minecraft Packet Handler
  * @author Blue Electric
  */
-public final class Player {
-	public final Leader leader;
+public final class Player extends Entity {
 	public final String IP;
 	public final int port;
 	public final short mtu;
 	public final long clientID;
 	
 	public String name;
-	
-	public float x, y, z;
 	
 	private int lastSequenceNum = 0;
 	
@@ -75,7 +69,7 @@ public final class Player {
 	}
 	
 	public Player(Leader leader, String IP, int port, short mtu, long clientID) throws Exception {
-		this.leader = leader;
+		super( leader, leader.entity.getNewEntityID() );
 		this.IP = IP;
 		this.port = port;
 		this.mtu = mtu;
@@ -205,6 +199,7 @@ public final class Player {
 		}
 	}
 	
+	@Override
 	public final void update() throws Exception {
 		synchronized (ACKQueue) {
 			if(this.ACKQueue.size() > 0){
@@ -423,32 +418,12 @@ public final class Player {
 			}
 		}
 	}
-
+	
 	public long getClientID() {
 		return clientID;
 	}
 
 	public String getName() {
 		return name;
-	}
-
-	public float getX() {
-		return x;
-	}
-
-	public float getY() {
-		return y;
-	}
-
-	public float getZ() {
-		return z;
-	}
-
-	public byte getYaw() {
-		return 0;
-	}
-
-	public byte getPitch() {
-		return 0;
 	}
 }
