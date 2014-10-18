@@ -1,5 +1,6 @@
 package darkjet.server;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -10,7 +11,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.Inflater;
-import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
 
 /**
  * Utility from Block Server
@@ -93,28 +93,31 @@ public class Utils{
 	}
 	
 	public final static byte[] compressByte(byte[]... compress) throws Exception {
-		ByteOutputStream bos = new ByteOutputStream();
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		DeflaterOutputStream dos = new DeflaterOutputStream( bos );
 		for(byte[] ba : compress) {
 			dos.write(ba);
 		}
 		dos.close();
-		byte[] buf = bos.getBytes();
+		byte[] buf = bos.toByteArray();
 		bos.close();
 		return buf;
 	}
 	
 	public final static byte[] decompressByte( byte[] decompress ) throws Exception {
+		return decompressByte(decompress, 0);
+	}
+	public final static byte[] decompressByte( byte[] decompress, int startInx ) throws Exception {
 		Inflater inflater = new Inflater();
-		inflater.setInput(decompress);
-		ByteOutputStream bos = new ByteOutputStream();
+		inflater.setInput(decompress, 1, decompress.length-1);
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		byte[] buf = new byte[1024];
 		while( !inflater.finished() ) {
 			int count = inflater.inflate(buf);
 			bos.write(buf, 0, count);
 		}
 		inflater.end();
-		buf = bos.getBytes();
+		buf = bos.toByteArray();
 		bos.close();
 		return buf;
 	}
