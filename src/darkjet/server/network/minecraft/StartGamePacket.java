@@ -25,7 +25,7 @@ public final class StartGamePacket extends BaseMinecraftPacket {
 		this.gamemode = gamemode;
 		this.seed = seed;
 		this.eid = eid;
-		this.generator = 1; //0 old, 1 infinite, 2 flat
+		this.generator = 0x1; //0 old, 1 infinite, 2 flat
 	}
 
 	@Override
@@ -33,7 +33,7 @@ public final class StartGamePacket extends BaseMinecraftPacket {
 		bb = ByteBuffer.allocate( 1 + (0x04 * 11) ); //Not sure about this, I think its right
 		bb.put(MinecraftIDs.START_GAME); 
 		bb.putInt((int) seed);
-		bb.putInt(generator);
+		bb.put( new byte[]{0x00, 0x00, 0x00, 0x01} );
 		bb.putInt(gamemode);
 		bb.putInt(eid);
 		bb.putInt( spawnpos.getX() );

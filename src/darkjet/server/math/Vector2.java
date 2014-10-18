@@ -24,6 +24,11 @@ public class Vector2 {
 	public void setZ(int v){
 		this.z = v;
 	}
+	
+	@Override
+	public int hashCode() {
+		return (x + ":" +z).hashCode();
+	}
 	@Override
 	public boolean equals(Object obj) {
 		if( !(obj instanceof Vector2) ) { return false; }

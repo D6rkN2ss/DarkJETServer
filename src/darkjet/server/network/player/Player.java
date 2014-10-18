@@ -4,12 +4,15 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+
 import darkjet.server.Leader;
 import darkjet.server.Utils;
 import darkjet.server.level.Level;
 import darkjet.server.level.chunk.Chunk;
 import darkjet.server.math.Vector;
 import darkjet.server.math.Vector2;
+import darkjet.server.math.Vectord;
+import darkjet.server.network.minecraft.AdventureSettingPacket;
 import darkjet.server.network.minecraft.BaseMinecraftPacket;
 import darkjet.server.network.minecraft.ClientConnectPacket;
 import darkjet.server.network.minecraft.ClientHandshakePacket;
@@ -110,68 +113,95 @@ public final class Player {
 		private final HashMap<Vector2, Boolean> requestChunks = new HashMap<>();
 		private final ArrayList<Integer> orders = new ArrayList<>();
 		
-		public boolean first = true;
+		public boolean first = true, firstReloader = false;;
 		public int lastCX = 0, lastCZ = 0;
+		
+		public boolean refreshAllUsed = false;
 		
 		@Override
 		public final void run() {
 			while ( !isInterrupted() ) {
-				int centerX = (int) Math.floor(x)/16;
-				int centerZ = (int) Math.floor(z)/16;
-				
 				try {
+					int centerX = (int) Math.floor(x) >> 4;
+					int centerZ = (int) Math.floor(z) >> 4;
+					
+					if( refreshAllUsed ) {
+						for( Chunk chunk : useChunks.values() ) {
+							Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(chunk) ) );
+						}
+						refreshAllUsed = false;
+						continue;
+					}
+					
 					if( centerX == lastCX && centerZ == lastCZ && !first ) {
 						Thread.sleep(100);
 						continue;
 					}
-				} catch (InterruptedException e) {
-					continue;
-				}
-				first = false;
-				lastCX = centerX; lastCZ = centerZ;
-				int radius = 4;
-				
-				MapOrder.clear(); requestChunks.clear(); orders.clear();
-				
-				for (int x = -radius; x <= radius; ++x) {
-					for (int z = -radius; z <= radius; ++z) {
-						int distance = (x*x) + (z*z);
-						int chunkX = x + centerX;
-						int chunkZ = z + centerZ;
-						if( !MapOrder.containsKey( distance ) ) {
-							MapOrder.put(distance, new ArrayList<Vector2>());
-						}
-						requestChunks.put(new Vector2(chunkX, chunkZ), true);
-						MapOrder.get(distance).add( new Vector2(chunkX, chunkZ) );
-						orders.add(distance);
-					}
-				}
-				Collections.sort(orders);
-
-				for( Integer i : orders ) {
-					for( Vector2 v : MapOrder.get(i) ) {
-						try {
-							if( useChunks.containsKey(v) ) { continue; }
-							useChunks.put(v, level.requestChunk(v));
-							Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(v) ) );
-						} catch (Exception e) {
-							e.printStackTrace();
-						}
-					}
-				}
-				Vector2[] v2a = requestChunks.keySet().toArray(new Vector2[useChunks.keySet().size()] );
-				for( int i = 0; i < v2a.length; i++ ) {
-					Vector2 v = v2a[i];
-					if( !useChunks.containsKey( v2a ) ) {
-						level.releaseChunk(v);
-						useChunks.remove(v);
-					}
-				}
-				
-				try {
-					Thread.sleep(100);
-				} catch (InterruptedException e) {
+					System.out.println("FullChunk for " + centerX + "," + centerZ);
+					lastCX = centerX; lastCZ = centerZ;
+					int radius = 4;
 					
+					MapOrder.clear(); requestChunks.clear(); orders.clear();
+					
+					
+					for (int x = -radius; x <= radius; ++x) {
+						for (int z = -radius; z <= radius; ++z) {
+							int distance = (x*x) + (z*z);
+							int chunkX = x + centerX;
+							int chunkZ = z + centerZ;
+							if( !MapOrder.containsKey( distance ) ) {
+								MapOrder.put(distance, new ArrayList<Vector2>());
+							}
+							requestChunks.put(new Vector2(chunkX, chunkZ), true);
+							MapOrder.get(distance).add( new Vector2(chunkX, chunkZ) );
+							orders.add(distance);
+						}
+					}
+					Collections.sort(orders);
+	
+					int sendCount = 0;
+					for( Integer i : orders ) {
+						for( Vector2 v : MapOrder.get(i) ) {
+							try {
+								if(sendCount == 56 && first) {
+									System.out.println( "Player " + name + " is ready to play!" );
+									Queue.addMinecraftPacket( new SetTimePacket(0) );
+									MovePlayerPacket player = new MovePlayerPacket();
+									player.x = x; player.y = y; player.z = z;
+									Queue.addMinecraftPacket(player);
+									AdventureSettingPacket adp = new AdventureSettingPacket(0x20);
+									Queue.addMinecraftPacket(adp);
+								}
+								if( useChunks.containsKey(v) ) { continue; }
+								useChunks.put(v, level.requestChunk(v));
+								Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(v) ) );
+								//Resend in First Chunk Sending
+								//TODO: Minecraft Error?
+								if( first ) {
+									useChunks.remove(v);
+								} else if ( firstReloader ) {
+									level.releaseChunk(v);
+								}
+								sendCount++;
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
+						}
+					}
+					Vector2[] v2a = useChunks.keySet().toArray(new Vector2[useChunks.keySet().size()] );
+					for( int i = 0; i < v2a.length; i++ ) {
+						Vector2 v = v2a[i];
+						if( !requestChunks.containsKey( v ) ) {
+							level.releaseChunk(v);
+							useChunks.remove(v);
+						}
+					}
+					if( firstReloader ) { firstReloader = false; }
+					if( first ) { firstReloader = true; }
+					first = false;
+					Thread.sleep(100);
+				} catch (Exception e) {
+					e.printStackTrace();
 				}
 			}
 		}
@@ -264,6 +294,7 @@ public final class Player {
 					StartGamePacket startgame = new StartGamePacket(new Vector(128, 4, 128), new Vector(128, 4, 128), 1, 0L, 0);
 					Queue.addMinecraftPacket(startgame);
 					
+					//TODO RealTime
 					SetTimePacket stp = new SetTimePacket(0);
 					Queue.addMinecraftPacket(stp);
 					
