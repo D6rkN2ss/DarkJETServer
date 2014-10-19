@@ -5,6 +5,10 @@ import java.util.ArrayList;
 import darkjet.server.Leader;
 import darkjet.server.Leader.BaseManager;
 
+/**
+ * Manager of Task
+ * @author Blue Electric
+ */
 public final class TaskManager extends BaseManager {
 	public final static int DEFAULT_TICK = 20;
 	

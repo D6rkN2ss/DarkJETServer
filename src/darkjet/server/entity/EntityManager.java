@@ -3,6 +3,10 @@ package darkjet.server.entity;
 import darkjet.server.Leader;
 import darkjet.server.Leader.BaseManager;
 
+/**
+ * Manager of Entity
+ * @author Blue Electric
+ */
 public final class EntityManager extends BaseManager {
 	public int entityCount = 1;
 	

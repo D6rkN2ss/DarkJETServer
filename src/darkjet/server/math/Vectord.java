@@ -1,5 +1,9 @@
 package darkjet.server.math;
 
+/**
+ * X, Y, Z with double
+ * @author Blue Electric
+ */
 public class Vectord{
 	protected double x, y, z;
 

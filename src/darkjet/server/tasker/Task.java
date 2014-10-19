@@ -1,5 +1,9 @@
 package darkjet.server.tasker;
 
+/**
+ * Do it!
+ * @author Blue Electric
+ */
 public abstract class Task {
 	public final int etick, sdelay;
 	public int tick, delay;

@@ -10,6 +10,10 @@ import darkjet.server.math.Vector2;
 import java.io.File;
 import java.util.HashMap;
 
+/**
+ * Chunk (Caching) Manager
+ * @author Blue Electric
+ */
 public final class Level {
 	private final Leader leader;
 	

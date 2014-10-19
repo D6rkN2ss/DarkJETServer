@@ -11,6 +11,10 @@ import darkjet.server.level.chunk.ChunkProvider;
 import darkjet.server.level.chunk.generator.FlatChunkGenerator;
 import darkjet.server.level.chunk.provider.BasicChunkProvider;
 
+/**
+ * Manager of Level
+ * @author Blue Electric
+ */
 public final class LevelManager extends BaseManager {
 	//<Name, Player>
 	private HashMap<String, Level> Levels = new HashMap<>();

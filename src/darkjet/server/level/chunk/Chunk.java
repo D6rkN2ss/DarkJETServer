@@ -2,6 +2,11 @@ package darkjet.server.level.chunk;
 
 import darkjet.server.Utils;
 
+/**
+ * Level <-> Chunk <-> ChunkProvider<br>
+ * Interface
+ * @author Blue Electric
+ */
 public class Chunk {
 	protected boolean wasModify = false;
 	//private boolean saveModify = false;

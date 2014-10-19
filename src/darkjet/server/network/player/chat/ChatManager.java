@@ -4,6 +4,10 @@ import darkjet.server.Leader;
 import darkjet.server.Leader.BaseManager;
 import darkjet.server.network.player.Player;
 
+/**
+ * Basic Chatting Manager
+ * @author Blue Electric
+ */
 public final class ChatManager extends BaseManager {
 	public ChatManager(Leader leader) {
 		super(leader);

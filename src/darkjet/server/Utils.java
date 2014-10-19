@@ -21,6 +21,7 @@ public class Utils{
 	 * Left-side Int
 	 * @param i Int to make Left-side
 	 * @return Left-sided Int
+	 * @author Blue Electric
 	 */
 	public final static byte[] LInt(int i) {
 		ByteBuffer buffer = ByteBuffer.allocate(4);
@@ -70,6 +71,7 @@ public class Utils{
 	 * @param bs Byte Array to Write
 	 * @param file File to Write
 	 * @return OK?
+	 * @author Blue Electric
 	 */
 	public final static boolean WriteByteArraytoFile(byte[] bs, File file) {
 		try {

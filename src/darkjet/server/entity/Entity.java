@@ -1,10 +1,12 @@
 package darkjet.server.entity;
 
 import darkjet.server.Leader;
-import darkjet.server.network.packets.minecraft.MovePlayerPacket;
-import darkjet.server.network.player.Player;
 import darkjet.server.tasker.MethodTask;
 
+/**
+ * Base Class for Entity
+ * @author Blue Electric
+ */
 public abstract class Entity {
 	public final Leader leader;
 	protected float x, y, z, yaw, pitch, bodyYaw;

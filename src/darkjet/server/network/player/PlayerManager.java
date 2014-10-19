@@ -12,6 +12,10 @@ import darkjet.server.math.Vector;
 import darkjet.server.math.Vector2;
 import darkjet.server.network.packets.minecraft.BaseMinecraftPacket;
 
+/**
+ * Manager of Player
+ * @author Blue Electric
+ */
 public final class PlayerManager extends BaseManager {
 	//<IP, Player>
 	public HashMap<String, Player> Players = new HashMap<>();

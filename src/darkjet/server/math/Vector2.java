@@ -1,5 +1,9 @@
 package darkjet.server.math;
 
+/**
+ * X, Z
+ * @author Blue Electric
+ */
 public class Vector2 {
 	private int x, z;
 

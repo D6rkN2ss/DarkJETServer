@@ -2,6 +2,10 @@ package darkjet.server.tasker;
 
 import java.lang.reflect.Method;
 
+/**
+ * Task with Object's Method
+ * @author Blue Electric
+ */
 public final class MethodTask extends Task {
 	private final Object owner;
 	private Method callback;
