@@ -50,16 +50,18 @@ public final class Level {
 	}
 	
 	public final void save() {
-		File levelDir = getLevelPath();
-		levelDir.mkdirs();
-		File Provider = new File( levelDir, "provider");
-		
-		Utils.WriteByteArraytoFile( provider.getName().getBytes() , Provider);
-		
-		for( ChunkContainer cc : ChunkCaches.values() ) {
-			provider.saveChunk(cc.chunk);
+		synchronized (this) {
+			File levelDir = getLevelPath();
+			levelDir.mkdirs();
+			File Provider = new File( levelDir, "provider");
+			
+			Utils.WriteByteArraytoFile( provider.getName().getBytes() , Provider);
+			
+			for( ChunkContainer cc : ChunkCaches.values() ) {
+				provider.saveChunk(cc.chunk);
+			}
+			ChunkCaches.clear();
 		}
-		ChunkCaches.clear();
 	}
 	
 	public final static class ChunkContainer {
