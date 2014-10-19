@@ -26,11 +26,13 @@ import darkjet.server.network.packets.minecraft.MinecraftIDs;
 import darkjet.server.network.packets.minecraft.MovePlayerPacket;
 import darkjet.server.network.packets.minecraft.PingPacket;
 import darkjet.server.network.packets.minecraft.PongPacket;
+import darkjet.server.network.packets.minecraft.RemoveBlockPacket;
 import darkjet.server.network.packets.minecraft.ServerHandshakePacket;
 import darkjet.server.network.packets.minecraft.SetHealthPacket;
 import darkjet.server.network.packets.minecraft.SetSpawnPositionPacket;
 import darkjet.server.network.packets.minecraft.SetTimePacket;
 import darkjet.server.network.packets.minecraft.StartGamePacket;
+import darkjet.server.network.packets.minecraft.UpdateBlockPacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket.ACKPacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket.NACKPacket;
@@ -84,7 +86,7 @@ public final class Player extends Entity {
 		recoveryQueue = new HashMap<Integer, byte[]>();
 		OftenrecoveryQueue = new HashMap<Integer, InternalDataPacket>();
 		
-		Queue = new InternalDataPacketQueue(1536);
+		Queue = new InternalDataPacketQueue(3939);
 		
 		level = leader.level.getLoadedLevel("world");
 		chunkSender = new ChunkSender();
@@ -352,6 +354,12 @@ public final class Player extends Entity {
 					ani.eid = getEID();
 					leader.player.broadcastPacket(ani, true, this);
 					break;
+				case MinecraftIDs.REMOVE_BLOCK:
+					RemoveBlockPacket rbp = new RemoveBlockPacket();
+					rbp.parse( ipck.buffer );
+					UpdateBlockPacket ubp = new UpdateBlockPacket(rbp.x, rbp.y, rbp.z, (byte) 0, (byte) 0);
+					leader.player.broadcastPacket(ubp, false, this);
+					break;
 			}
 		}
 	}
@@ -415,7 +423,7 @@ public final class Player extends Entity {
 		 */
 		public final void addMinecraftPacket(byte[] buf) throws Exception {
 			synchronized ( this ) {
-				if( mtu < buffer.position() + buf.length ) {
+				if( mtu < buffer.position() + buf.length + 4 ) {
 					//Buffer is Empty = buf too big to send.
 					if( isEmpty() ) {
 						throw new RuntimeException("Unhandled Too Big Packet");
