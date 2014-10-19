@@ -480,4 +480,10 @@ public final class Player extends Entity {
 	public String getName() {
 		return name;
 	}
+
+	@Override
+	public void updateMovement() throws Exception {
+		MovePlayerPacket mpp = new MovePlayerPacket(EID, x, y, z, yaw, pitch, bodyYaw, false);
+		leader.player.broadcastPacket(mpp, true, (Player) this);
+	}
 }
