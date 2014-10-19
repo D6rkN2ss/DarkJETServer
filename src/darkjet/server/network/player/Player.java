@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+
 import darkjet.server.Leader;
 import darkjet.server.Utils;
 import darkjet.server.entity.Entity;
@@ -24,6 +25,7 @@ import darkjet.server.network.packets.minecraft.MessagePacket;
 import darkjet.server.network.packets.minecraft.MinecraftIDs;
 import darkjet.server.network.packets.minecraft.MovePlayerPacket;
 import darkjet.server.network.packets.minecraft.PingPacket;
+import darkjet.server.network.packets.minecraft.PlayerEquipmentPacket;
 import darkjet.server.network.packets.minecraft.PongPacket;
 import darkjet.server.network.packets.minecraft.RemoveBlockPacket;
 import darkjet.server.network.packets.minecraft.ServerHandshakePacket;
@@ -379,6 +381,12 @@ public final class Player extends Entity {
 						level.setBlock(Target, (byte) uip.item, (byte) 0x00); 
 						leader.player.broadcastPacket(uubp, false);
 					}
+					break;
+				case MinecraftIDs.PLAYER_EQUIPMENT:
+					PlayerEquipmentPacket pep = new PlayerEquipmentPacket();
+					pep.parse( ipck.buffer );
+					pep.eid = EID; pep.slot = 0;
+					leader.player.broadcastPacket(pep, false, this);
 					break;
 			}
 		}
