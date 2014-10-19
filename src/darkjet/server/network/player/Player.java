@@ -331,6 +331,7 @@ public final class Player extends Entity {
 				case MinecraftIDs.MOVE_PLAYER:
 					MovePlayerPacket movePlayer = new MovePlayerPacket();
 					movePlayer.parse( ipck.buffer );
+					System.out.println("MOVE_PLAYER: " + x + "," + y + "," + z);
 					x = movePlayer.x;
 					y = movePlayer.y;
 					z = movePlayer.z;
@@ -349,6 +350,7 @@ public final class Player extends Entity {
 			}
 		} else if( ACK.getPID() == RaknetIDs.NACK ) {
 			for(int i: ACK.sequenceNumbers){
+				System.err.println( i + " love you" );
 				if( recoveryQueue.containsKey(i) ) {
 					leader.network.server.sendTo( recoveryQueue.get(i) , IP, port);
 				} else if( OftenrecoveryQueue.containsKey(i) ) { //Often Changed Movement Packet!
