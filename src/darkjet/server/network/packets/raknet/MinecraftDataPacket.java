@@ -1,9 +1,12 @@
 package darkjet.server.network.packets.raknet;
 
+import java.io.File;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
 import darkjet.server.Utils;
 import darkjet.server.network.packets.BasePacket;
 
@@ -39,6 +42,7 @@ public final class MinecraftDataPacket extends BasePacket {
 		public short splitID = -1;
 		public int splitIndex = -1;
 		public int sequenceNumber;
+		public int sequencingIndex;
 
 		public static InternalDataPacket[] fromBinary(byte[] buffer){
 			ByteBuffer bb = ByteBuffer.wrap(buffer);
@@ -46,12 +50,17 @@ public final class MinecraftDataPacket extends BasePacket {
 			while(bb.position() < bb.capacity()) {
 				try {
 					InternalDataPacket pck = new InternalDataPacket();
+					//System.out.print("startat: " + bb.position() + " ");
 					byte flag = bb.get();
-					pck.reliability = (byte) ((flag & 0b11100000) >> 5);
-					pck.hasSplit = (flag & 0b00010000) > 0;
-					int length = (int) Math.ceil(bb.getShort() / 8);
+					pck.reliability = (byte) (flag >> 5);
+					pck.hasSplit = (flag & 0b00010000) == 16;
+					int length = ((bb.getShort() + 7) >> 3); // The Length is in bits, so Bits to Bytes conversion
 					if(pck.reliability == 2 || pck.reliability == 3 || pck.reliability == 4 || pck.reliability == 6 || pck.reliability == 7){
 						pck.messageIndex = Utils.getLTriad(buffer, bb.position());
+						bb.position(bb.position() + 3);
+					}
+					if(pck.reliability == 1 || pck.reliability == 4) {
+						pck.sequencingIndex = Utils.getLTriad(buffer, bb.position());
 						bb.position(bb.position() + 3);
 					}
 					if(pck.reliability == 1 || pck.reliability == 3 || pck.reliability == 4 || pck.reliability == 7){
@@ -64,11 +73,13 @@ public final class MinecraftDataPacket extends BasePacket {
 						pck.splitID = bb.getShort();
 						pck.splitIndex = bb.getInt();
 					}
+					//System.out.println( "readLength:" + length );
 					pck.buffer = new byte[length];
 					bb.get(pck.buffer);
 					list.add(pck);
 				} catch (Exception e) {
-					//e.printStackTrace();
+					e.printStackTrace();
+					Utils.WriteByteArraytoFile(buffer, new File(".dumpPacket"));
 					break;
 				}
 			}
@@ -79,6 +90,14 @@ public final class MinecraftDataPacket extends BasePacket {
 
 		public int getLength(){
 			return 3 + buffer.length + (messageIndex != -1 ? 3:0) + (orderIndex != -1 ? 4:0) +  (hasSplit ? 10:0);
+		}
+		
+		public static final InternalDataPacket wrapMCPacket(byte[] buffer, int messageIndex) {
+			InternalDataPacket idp = new InternalDataPacket();
+			idp.buffer = buffer;
+			idp.reliability = 2;
+			idp.messageIndex = messageIndex++;
+			return idp;
 		}
 
 		public byte[] toBinary(){
