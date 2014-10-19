@@ -5,6 +5,7 @@ import darkjet.server.Utils;
 import darkjet.server.level.chunk.Chunk;
 import darkjet.server.level.chunk.ChunkGenerator;
 import darkjet.server.level.chunk.ChunkProvider;
+import darkjet.server.math.Vector;
 import darkjet.server.math.Vector2;
 
 import java.io.File;
@@ -125,14 +126,30 @@ public final class Level {
 		return leader.level.getLevelPath(Name);
 	}
 	
+	public final void setBlock(Vector v, byte id, byte meta) {
+		setBlock(v.getX(), v.getY(), v.getZ(), id, meta);
+	}
 	public final void setBlock(int x, int y, int z, byte id, byte meta) {
 		Chunk chunk = ChunkCaches.get( new Vector2( x >>4, z >> 4 ) ).chunk;
-		while( !chunk.isEditable() ) {
+		while( !chunk.isReady() ) {
 			
 		}
 		int cx = x % 16;
 		int cz = z % 16;
 		chunk.setBlock(cx, (byte) y, cz, id, meta);
 		provider.saveChunk(chunk);
+	}
+
+	public final byte getBlock(Vector v) {
+		return getBlock(v.getX(), v.getY(), v.getZ());
+	}
+	public final byte getBlock(int x, int y, int z) {
+		Chunk chunk = ChunkCaches.get( new Vector2( x >>4, z >> 4 ) ).chunk;
+		while( !chunk.isReady() ) {
+			
+		}
+		int cx = x % 16;
+		int cz = z % 16;
+		return chunk.getBlock(cx, y, cz);
 	}
 }

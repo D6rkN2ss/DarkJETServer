@@ -5,6 +5,13 @@ package darkjet.server.math;
  * @author Blue Electric
  */
 public class Vector {
+	public static final byte SIDE_DOWN = 0;
+	public static final byte SIDE_UP = 1;
+	public static final byte SIDE_NORTH = 2;
+	public static final byte SIDE_SOUTH = 3;
+	public static final byte SIDE_WEST = 4;
+	public static final byte SIDE_EAST = 5;
+	
 	private int x, y, z;
 
 	public Vector(int v){
@@ -70,6 +77,24 @@ public class Vector {
 	public double distance(Vector other){
 		Vector delta = subtract(other).abs();
 		return delta.length();
+	}
+	public Vector getSide(byte side, int step) {
+		switch( side ){
+			case SIDE_DOWN:
+				return new Vector(x, y - step, z);
+			case SIDE_UP:
+				return new Vector(x, y + step, z);
+			case SIDE_NORTH:
+	        return new Vector(x, y, z - step);
+	        case SIDE_SOUTH:
+	            return new Vector(x, y, z + step);
+	        case SIDE_WEST:
+	            return new Vector(x - step, y, z);
+	        case SIDE_EAST:
+	            return new Vector(x + step, y, z);
+	        default:
+	            return this;
+		}
 	}
 	
 	public static Vector merge(Vector... vectors){

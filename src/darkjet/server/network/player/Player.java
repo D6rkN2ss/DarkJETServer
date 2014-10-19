@@ -4,7 +4,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-
 import darkjet.server.Leader;
 import darkjet.server.Utils;
 import darkjet.server.entity.Entity;
@@ -33,13 +32,13 @@ import darkjet.server.network.packets.minecraft.SetSpawnPositionPacket;
 import darkjet.server.network.packets.minecraft.SetTimePacket;
 import darkjet.server.network.packets.minecraft.StartGamePacket;
 import darkjet.server.network.packets.minecraft.UpdateBlockPacket;
+import darkjet.server.network.packets.minecraft.UseItemPacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket.ACKPacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket.NACKPacket;
 import darkjet.server.network.packets.raknet.MinecraftDataPacket;
 import darkjet.server.network.packets.raknet.RaknetIDs;
 import darkjet.server.network.packets.raknet.MinecraftDataPacket.InternalDataPacket;
-import darkjet.server.tasker.MethodTask;
 
 /**
  * Minecraft Packet Handler
@@ -172,24 +171,24 @@ public final class Player extends Entity {
 			}
 			Collections.sort(orders);
 
-			int sendCount = 0;
-			for( Integer i : orders ) {
-				for( Vector2 v : MapOrder.get(i) ) {
-					try {
-						if( useChunks.containsKey(v) ) { continue; }
-						useChunks.put(v, level.getChunk(v.getX(), v.getZ()));
-						Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(v) ) );
-						sleep(1);
-						//Resend in First Chunk Sending
-						//TODO: Minecraft Error?
-						if( first ) {
-							useChunks.remove(v);
-						} else if ( firstReloader ) {
-							level.releaseChunk(v);
+			synchronized (Queue) {
+				for( Integer i : orders ) {
+					for( Vector2 v : MapOrder.get(i) ) {
+						try {
+							if( useChunks.containsKey(v) ) { continue; }
+							useChunks.put(v, level.getChunk(v.getX(), v.getZ()));
+							Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(v) ) );
+							sleep(1);
+							//Resend in First Chunk Sending
+							//TODO: Minecraft Error?
+							if( first ) {
+								useChunks.remove(v);
+							} else if ( firstReloader ) {
+								level.releaseChunk(v);
+							}
+						} catch (Exception e) {
+							e.printStackTrace();
 						}
-						sendCount++;
-					} catch (Exception e) {
-						e.printStackTrace();
 					}
 				}
 			}
@@ -364,7 +363,22 @@ public final class Player extends Entity {
 					rbp.parse( ipck.buffer );
 					UpdateBlockPacket ubp = new UpdateBlockPacket(rbp.x, rbp.y, rbp.z, (byte) 0, (byte) 0);
 					level.setBlock(rbp.x, rbp.y, rbp.z, (byte) 0x00, (byte) 0x00); 
-					leader.player.broadcastPacket(ubp, false, this);
+					leader.player.broadcastPacket(ubp, false);
+					break;
+				case MinecraftIDs.USE_ITEM:
+					UseItemPacket uip = new UseItemPacket();
+					uip.parse( ipck.buffer );
+					if( !(uip.face >= 0 && uip.face <= 5) ) {
+						break;
+					}
+					System.out.println( uip.item );
+					Vector Target = new Vector(uip.x, uip.y, uip.z).getSide((byte) uip.face, 1);
+					byte TB = level.getBlock(Target);
+					if( TB == 0x00 ) {
+						UpdateBlockPacket uubp = new UpdateBlockPacket(Target.getX(), (byte) Target.getY(), Target.getZ(), (byte) uip.item, (byte) 0x00);
+						level.setBlock(Target, (byte) uip.item, (byte) 0x00); 
+						leader.player.broadcastPacket(uubp, false);
+					}
 					break;
 			}
 		}

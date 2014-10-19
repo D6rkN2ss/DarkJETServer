@@ -31,9 +31,12 @@ public class Chunk {
 	}
 	
 	public final void setBlock(int x, byte y, int z, byte id, byte meta) {
-		System.out.println(x +","+y+","+z + "=" + ((x << 11) + (z << 7) + y) );
 		blockIDs[(x << 11) + (z << 7) + y] = id;
 		wasModify = true;
+	}
+	
+	public final byte getBlock(int x, int y, int z) {
+		return blockIDs[(x << 11) + (z << 7) + y];
 	}
 	
 	/**
@@ -50,9 +53,9 @@ public class Chunk {
 	}
 
 	/**
-	 * @return This chunk able to edit?
+	 * @return This chunk is Ready?
 	 */
-	public boolean isEditable() {
+	public boolean isReady() {
 		return true;
 	}
 }

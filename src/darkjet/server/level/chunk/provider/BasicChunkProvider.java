@@ -125,7 +125,7 @@ public class BasicChunkProvider extends ChunkProvider {
 		}
 		
 		@Override
-		public boolean isEditable() {
+		public boolean isReady() {
 			return touched;
 		}
 	}
