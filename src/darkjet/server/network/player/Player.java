@@ -2,6 +2,7 @@ package darkjet.server.network.player;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 
@@ -12,24 +13,24 @@ import darkjet.server.level.Level;
 import darkjet.server.level.chunk.Chunk;
 import darkjet.server.math.Vector;
 import darkjet.server.math.Vector2;
-import darkjet.server.network.minecraft.AddPlayerPacket;
-import darkjet.server.network.minecraft.AdventureSettingPacket;
-import darkjet.server.network.minecraft.BaseMinecraftPacket;
-import darkjet.server.network.minecraft.ClientConnectPacket;
-import darkjet.server.network.minecraft.ClientHandshakePacket;
-import darkjet.server.network.minecraft.FullChunkDataPacket;
-import darkjet.server.network.minecraft.LoginPacket;
-import darkjet.server.network.minecraft.LoginStatusPacket;
-import darkjet.server.network.minecraft.MessagePacket;
-import darkjet.server.network.minecraft.MinecraftIDs;
-import darkjet.server.network.minecraft.MovePlayerPacket;
-import darkjet.server.network.minecraft.PingPacket;
-import darkjet.server.network.minecraft.PongPacket;
-import darkjet.server.network.minecraft.ServerHandshakePacket;
-import darkjet.server.network.minecraft.SetHealthPacket;
-import darkjet.server.network.minecraft.SetSpawnPositionPacket;
-import darkjet.server.network.minecraft.SetTimePacket;
-import darkjet.server.network.minecraft.StartGamePacket;
+import darkjet.server.network.packets.minecraft.AddPlayerPacket;
+import darkjet.server.network.packets.minecraft.AdventureSettingPacket;
+import darkjet.server.network.packets.minecraft.BaseMinecraftPacket;
+import darkjet.server.network.packets.minecraft.ClientConnectPacket;
+import darkjet.server.network.packets.minecraft.ClientHandshakePacket;
+import darkjet.server.network.packets.minecraft.FullChunkDataPacket;
+import darkjet.server.network.packets.minecraft.LoginPacket;
+import darkjet.server.network.packets.minecraft.LoginStatusPacket;
+import darkjet.server.network.packets.minecraft.MessagePacket;
+import darkjet.server.network.packets.minecraft.MinecraftIDs;
+import darkjet.server.network.packets.minecraft.MovePlayerPacket;
+import darkjet.server.network.packets.minecraft.PingPacket;
+import darkjet.server.network.packets.minecraft.PongPacket;
+import darkjet.server.network.packets.minecraft.ServerHandshakePacket;
+import darkjet.server.network.packets.minecraft.SetHealthPacket;
+import darkjet.server.network.packets.minecraft.SetSpawnPositionPacket;
+import darkjet.server.network.packets.minecraft.SetTimePacket;
+import darkjet.server.network.packets.minecraft.StartGamePacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket.ACKPacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket.NACKPacket;
@@ -55,6 +56,7 @@ public final class Player extends Entity {
 	private ArrayList<Integer> ACKQueue; // Received packet queue
 	private ArrayList<Integer> NACKQueue; // Not received packet queue
 	private HashMap<Integer, byte[]> recoveryQueue;
+	private HashMap<Integer, InternalDataPacket> OftenrecoveryQueue;
 	
 	protected final InternalDataPacketQueue Queue;
 	
@@ -80,6 +82,7 @@ public final class Player extends Entity {
 		ACKQueue = new ArrayList<Integer>();
 		NACKQueue = new ArrayList<Integer>();
 		recoveryQueue = new HashMap<Integer, byte[]>();
+		OftenrecoveryQueue = new HashMap<Integer, InternalDataPacket>();
 		
 		Queue = new InternalDataPacketQueue(1536);
 		
@@ -118,79 +121,77 @@ public final class Player extends Entity {
 		public final void run() {
 			while ( !isInterrupted() ) {
 				try {
-					synchronized (Queue) {
-						int centerX = (int) Math.floor(x) >> 4;
-						int centerZ = (int) Math.floor(z) >> 4;
-						
-						if( refreshAllUsed ) {
-							for( Chunk chunk : useChunks.values() ) {
-								Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(chunk) ) );
-							}
-							refreshAllUsed = false;
-							continue;
+					int centerX = (int) Math.floor(x) >> 4;
+					int centerZ = (int) Math.floor(z) >> 4;
+					
+					if( refreshAllUsed ) {
+						for( Chunk chunk : useChunks.values() ) {
+							Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(chunk) ) );
 						}
-						
-						if( centerX == lastCX && centerZ == lastCZ && !first ) {
-							Thread.sleep(100);
-							continue;
-						}
-						System.out.println("FullChunk for " + centerX + "," + centerZ);
-						lastCX = centerX; lastCZ = centerZ;
-						int radius = 4;
-						
-						MapOrder.clear(); requestChunks.clear(); orders.clear();
-						
-						for (int x = -radius; x <= radius; ++x) {
-							for (int z = -radius; z <= radius; ++z) {
-								int distance = (x*x) + (z*z);
-								int chunkX = x + centerX;
-								int chunkZ = z + centerZ;
-								if( !MapOrder.containsKey( distance ) ) {
-									MapOrder.put(distance, new ArrayList<Vector2>());
-								}
-								requestChunks.put(new Vector2(chunkX, chunkZ), true);
-								MapOrder.get(distance).add( new Vector2(chunkX, chunkZ) );
-								orders.add(distance);
-							}
-						}
-						Collections.sort(orders);
-		
-						int sendCount = 0;
-						for( Integer i : orders ) {
-							for( Vector2 v : MapOrder.get(i) ) {
-								try {
-									if(sendCount == 56 && first) {
-										System.out.println( "Player " + name + " is ready to play!" );
-										InitPlayer();
-									}
-									if( useChunks.containsKey(v) ) { continue; }
-									useChunks.put(v, level.requestChunk(v));
-									Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(v) ) );
-									//Resend in First Chunk Sending
-									//TODO: Minecraft Error?
-									if( first ) {
-										useChunks.remove(v);
-									} else if ( firstReloader ) {
-										level.releaseChunk(v);
-									}
-									sendCount++;
-								} catch (Exception e) {
-									e.printStackTrace();
-								}
-							}
-						}
-						Vector2[] v2a = useChunks.keySet().toArray(new Vector2[useChunks.keySet().size()] );
-						for( int i = 0; i < v2a.length; i++ ) {
-							Vector2 v = v2a[i];
-							if( !requestChunks.containsKey( v ) ) {
-								level.releaseChunk(v);
-								useChunks.remove(v);
-							}
-						}
-						if( firstReloader ) { firstReloader = false; }
-						if( first ) { firstReloader = true; }
-						first = false;
+						refreshAllUsed = false;
+						continue;
 					}
+					
+					if( centerX == lastCX && centerZ == lastCZ && !first ) {
+						Thread.sleep(100);
+						continue;
+					}
+					System.out.println("FullChunk for " + centerX + "," + centerZ);
+					lastCX = centerX; lastCZ = centerZ;
+					int radius = 4;
+					
+					MapOrder.clear(); requestChunks.clear(); orders.clear();
+					
+					for (int x = -radius; x <= radius; ++x) {
+						for (int z = -radius; z <= radius; ++z) {
+							int distance = (x*x) + (z*z);
+							int chunkX = x + centerX;
+							int chunkZ = z + centerZ;
+							if( !MapOrder.containsKey( distance ) ) {
+								MapOrder.put(distance, new ArrayList<Vector2>());
+							}
+							requestChunks.put(new Vector2(chunkX, chunkZ), true);
+							MapOrder.get(distance).add( new Vector2(chunkX, chunkZ) );
+							orders.add(distance);
+						}
+					}
+					Collections.sort(orders);
+	
+					int sendCount = 0;
+					for( Integer i : orders ) {
+						for( Vector2 v : MapOrder.get(i) ) {
+							try {
+								if(sendCount == 56 && first) {
+									System.out.println( "Player " + name + " is ready to play!" );
+									InitPlayer();
+								}
+								if( useChunks.containsKey(v) ) { continue; }
+								useChunks.put(v, level.requestChunk(v));
+								Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(v) ) );
+								//Resend in First Chunk Sending
+								//TODO: Minecraft Error?
+								if( first ) {
+									useChunks.remove(v);
+								} else if ( firstReloader ) {
+									level.releaseChunk(v);
+								}
+								sendCount++;
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
+						}
+					}
+					Vector2[] v2a = useChunks.keySet().toArray(new Vector2[useChunks.keySet().size()] );
+					for( int i = 0; i < v2a.length; i++ ) {
+						Vector2 v = v2a[i];
+						if( !requestChunks.containsKey( v ) ) {
+							level.releaseChunk(v);
+							useChunks.remove(v);
+						}
+					}
+					if( firstReloader ) { firstReloader = false; }
+					if( first ) { firstReloader = true; }
+					first = false;
 					Thread.sleep(100);
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -241,7 +242,7 @@ public final class Player extends Entity {
 		
 		//Add player for other Player
 		AddPlayerPacket app = new AddPlayerPacket(Player.this);
-		leader.player.broadcastPacket(app, Player.this);
+		leader.player.broadcastPacket(app, false, Player.this);
 		
 		sendChat("Welcome to DarkJET Server, " + name);
 		
@@ -348,7 +349,17 @@ public final class Player extends Entity {
 			}
 		} else if( ACK.getPID() == RaknetIDs.NACK ) {
 			for(int i: ACK.sequenceNumbers){
-				leader.network.server.sendTo( recoveryQueue.get(i) , IP, port);
+				if( recoveryQueue.containsKey(i) ) {
+					leader.network.server.sendTo( recoveryQueue.get(i) , IP, port);
+				} else if( OftenrecoveryQueue.containsKey(i) ) { //Often Changed Movement Packet!
+					InternalDataPacket idp = OftenrecoveryQueue.get(i);
+					switch( idp.buffer[0] ) {
+						case MinecraftIDs.MOVE_PLAYER:
+							MovePlayerPacket mpp = new MovePlayerPacket(EID, x, y, z, yaw, pitch, bodyYaw, false);
+							idp.buffer = mpp.getResponse();
+							Queue.recoverOftenPacket(i, idp.toBinary());
+					}
+				}
 			}
 		} else {
 			
@@ -357,17 +368,20 @@ public final class Player extends Entity {
 	
 	public final class InternalDataPacketQueue {
 		public ByteBuffer buffer;
+		public ByteBuffer directBuffer;
 		public int sequenceNumber = 0;
 		public int messageIndex = 0;
+		public int orderIndex = 0;
 		public final int mtu;
 		
 		public InternalDataPacketQueue(int mtu) {
 			this.mtu = mtu;
 			buffer = ByteBuffer.allocate(mtu);
-			reset();
+			directBuffer = ByteBuffer.allocate(mtu);
+			resetBuffer();
 		}
 		
-		public final void reset() {
+		public final void resetBuffer() {
 			buffer.clear();
 			buffer.position(4);
 		}
@@ -405,20 +419,46 @@ public final class Player extends Entity {
 			}
 		}
 		
+		public final void sendOffenPacket(BaseMinecraftPacket pak) throws Exception {
+			synchronized ( this ) {
+				InternalDataPacket idp = InternalDataPacket.wrapMCPacket(pak.getResponse(), messageIndex++);
+				directBuffer.clear(); directBuffer.position(4);
+				directBuffer.put( idp.toBinary() );
+				send(directBuffer);
+				OftenrecoveryQueue.put(sequenceNumber, idp);
+			}
+		}
+		
+		protected final void recoverOftenPacket(int seq, byte[] buf) throws Exception {
+			synchronized ( this ) {
+				directBuffer.clear(); directBuffer.position(4);
+				directBuffer.put( buf );
+				send(seq, directBuffer);
+			}
+		}
+		
 		public final void send() throws Exception {
 			synchronized ( this ) {
-				int len = buffer.position();
-				buffer.position(0);
-				buffer.put( RaknetIDs.DATA_PACKET_4 );
-				buffer.put( Utils.putLTriad(sequenceNumber) );
-				byte[] sendBuffer = new byte[4+len];
-				buffer.position(0);
-				buffer.get(sendBuffer);
-				recoveryQueue.put(sequenceNumber, sendBuffer);
-				leader.network.server.sendTo(sendBuffer, IP, port);
-				sequenceNumber++;
-				reset();
+				recoveryQueue.put(sequenceNumber, send(buffer));
+				resetBuffer();
 			}
+		}
+		
+		private final byte[] send(ByteBuffer buffer) throws Exception {
+			return send(sequenceNumber++, buffer);
+		}
+		
+		protected final byte[] send(int seq, ByteBuffer buffer) throws Exception {
+			//System.out.println("seq:" + seq);
+			int len = buffer.position();
+			buffer.position(0);
+			buffer.put( RaknetIDs.DATA_PACKET_4 );
+			buffer.put( Utils.putLTriad(seq) );
+			byte[] sendBuffer = new byte[4+len];
+			buffer.position(0);
+			buffer.get(sendBuffer);
+			leader.network.server.sendTo(sendBuffer, IP, port);
+			return sendBuffer;
 		}
 	}
 	

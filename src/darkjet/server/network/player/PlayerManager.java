@@ -10,7 +10,7 @@ import darkjet.server.Leader.BaseManager;
 import darkjet.server.level.Level;
 import darkjet.server.math.Vector;
 import darkjet.server.math.Vector2;
-import darkjet.server.network.minecraft.BaseMinecraftPacket;
+import darkjet.server.network.packets.minecraft.BaseMinecraftPacket;
 
 public final class PlayerManager extends BaseManager {
 	//<IP, Player>
@@ -45,14 +45,18 @@ public final class PlayerManager extends BaseManager {
 		}
 		return Result;
 	}
-	public final void broadcastPacket(BaseMinecraftPacket packet, Player... Ignore) throws Exception {
+	public final void broadcastPacket(BaseMinecraftPacket packet, boolean otfen, Player... Ignore) throws Exception {
 		for(Player p : getPlayers()) {
 			boolean IgnoreIt = false;
 			for( Player ip : Ignore ) {
 				if( p == ip ) { IgnoreIt = true; break; }
 			}
 			if(IgnoreIt) { continue; }
-			p.Queue.addMinecraftPacket(packet);
+			if( otfen ) {
+				p.Queue.sendOffenPacket(packet);
+			} else {
+				p.Queue.addMinecraftPacket(packet);
+			}
 		}
 	}
 
