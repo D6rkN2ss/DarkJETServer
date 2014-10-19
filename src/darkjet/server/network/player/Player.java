@@ -122,82 +122,92 @@ public final class Player extends Entity {
 		public final void run() {
 			while ( !isInterrupted() ) {
 				try {
-					int centerX = (int) Math.floor(x) >> 4;
-					int centerZ = (int) Math.floor(z) >> 4;
-					
-					if( refreshAllUsed ) {
-						for( Chunk chunk : useChunks.values() ) {
-							Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(chunk) ) );
+					if(first) {
+						synchronized (Queue) {
+							updateChunk();
 						}
-						refreshAllUsed = false;
-						continue;
+					} else {
+						updateChunk();
 					}
-					
-					if( centerX == lastCX && centerZ == lastCZ && !first ) {
-						Thread.sleep(100);
-						continue;
-					}
-					System.out.println("FullChunk for " + centerX + "," + centerZ);
-					lastCX = centerX; lastCZ = centerZ;
-					int radius = 4;
-					
-					MapOrder.clear(); requestChunks.clear(); orders.clear();
-					
-					for (int x = -radius; x <= radius; ++x) {
-						for (int z = -radius; z <= radius; ++z) {
-							int distance = (x*x) + (z*z);
-							int chunkX = x + centerX;
-							int chunkZ = z + centerZ;
-							if( !MapOrder.containsKey( distance ) ) {
-								MapOrder.put(distance, new ArrayList<Vector2>());
-							}
-							requestChunks.put(new Vector2(chunkX, chunkZ), true);
-							MapOrder.get(distance).add( new Vector2(chunkX, chunkZ) );
-							orders.add(distance);
-						}
-					}
-					Collections.sort(orders);
-	
-					int sendCount = 0;
-					for( Integer i : orders ) {
-						for( Vector2 v : MapOrder.get(i) ) {
-							try {
-								if(sendCount == 56 && first) {
-									System.out.println( "Player " + name + " is ready to play!" );
-									InitPlayer();
-								}
-								if( useChunks.containsKey(v) ) { continue; }
-								useChunks.put(v, level.requestChunk(v));
-								Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(v) ) );
-								//Resend in First Chunk Sending
-								//TODO: Minecraft Error?
-								if( first ) {
-									useChunks.remove(v);
-								} else if ( firstReloader ) {
-									level.releaseChunk(v);
-								}
-								sendCount++;
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
-						}
-					}
-					Vector2[] v2a = useChunks.keySet().toArray(new Vector2[useChunks.keySet().size()] );
-					for( int i = 0; i < v2a.length; i++ ) {
-						Vector2 v = v2a[i];
-						if( !requestChunks.containsKey( v ) ) {
-							level.releaseChunk(v);
-							useChunks.remove(v);
-						}
-					}
-					if( firstReloader ) { firstReloader = false; }
-					if( first ) { firstReloader = true; }
-					first = false;
 					Thread.sleep(100);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
+		}
+		
+		private final void updateChunk() throws Exception {
+			int centerX = (int) Math.floor(x) >> 4;
+			int centerZ = (int) Math.floor(z) >> 4;
+			
+			if( refreshAllUsed ) {
+				for( Chunk chunk : useChunks.values() ) {
+					Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(chunk) ) );
+				}
+				refreshAllUsed = false;
+				return;
+			}
+			
+			if( centerX == lastCX && centerZ == lastCZ && !first ) {
+				Thread.sleep(100);
+				return;
+			}
+			System.out.println("FullChunk for " + centerX + "," + centerZ);
+			lastCX = centerX; lastCZ = centerZ;
+			int radius = 4;
+			
+			MapOrder.clear(); requestChunks.clear(); orders.clear();
+			
+			for (int x = -radius; x <= radius; ++x) {
+				for (int z = -radius; z <= radius; ++z) {
+					int distance = (x*x) + (z*z);
+					int chunkX = x + centerX;
+					int chunkZ = z + centerZ;
+					if( !MapOrder.containsKey( distance ) ) {
+						MapOrder.put(distance, new ArrayList<Vector2>());
+					}
+					requestChunks.put(new Vector2(chunkX, chunkZ), true);
+					MapOrder.get(distance).add( new Vector2(chunkX, chunkZ) );
+					orders.add(distance);
+				}
+			}
+			Collections.sort(orders);
+
+			int sendCount = 0;
+			for( Integer i : orders ) {
+				for( Vector2 v : MapOrder.get(i) ) {
+					try {
+						if(sendCount == 56 && first) {
+							System.out.println( "Player " + name + " is ready to play!" );
+							InitPlayer();
+						}
+						if( useChunks.containsKey(v) ) { continue; }
+						useChunks.put(v, level.requestChunk(v));
+						Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(v) ) );
+						//Resend in First Chunk Sending
+						//TODO: Minecraft Error?
+						if( first ) {
+							useChunks.remove(v);
+						} else if ( firstReloader ) {
+							level.releaseChunk(v);
+						}
+						sendCount++;
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			}
+			Vector2[] v2a = useChunks.keySet().toArray(new Vector2[useChunks.keySet().size()] );
+			for( int i = 0; i < v2a.length; i++ ) {
+				Vector2 v = v2a[i];
+				if( !requestChunks.containsKey( v ) ) {
+					level.releaseChunk(v);
+					useChunks.remove(v);
+				}
+			}
+			if( firstReloader ) { firstReloader = false; }
+			if( first ) { firstReloader = true; }
+			first = false;
 		}
 	}
 	
