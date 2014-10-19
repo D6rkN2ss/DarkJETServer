@@ -14,6 +14,7 @@ import darkjet.server.math.Vector;
 import darkjet.server.math.Vector2;
 import darkjet.server.network.packets.minecraft.AddPlayerPacket;
 import darkjet.server.network.packets.minecraft.AdventureSettingPacket;
+import darkjet.server.network.packets.minecraft.AnimatePacket;
 import darkjet.server.network.packets.minecraft.BaseMinecraftPacket;
 import darkjet.server.network.packets.minecraft.ClientConnectPacket;
 import darkjet.server.network.packets.minecraft.ClientHandshakePacket;
@@ -87,8 +88,6 @@ public final class Player extends Entity {
 		
 		level = leader.level.getLoadedLevel("world");
 		chunkSender = new ChunkSender();
-		
-		leader.task.addTask( new MethodTask(1, 10, this, "flushQueue") );
 	}
 	
 	//External Part
@@ -122,13 +121,7 @@ public final class Player extends Entity {
 		public final void run() {
 			while ( !isInterrupted() ) {
 				try {
-					if(first) {
-						synchronized (Queue) {
-							updateChunk();
-						}
-					} else {
-						updateChunk();
-					}
+					updateChunk();
 					Thread.sleep(100);
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -211,7 +204,9 @@ public final class Player extends Entity {
 		}
 	}
 	
-	public final void flushQueue() throws Exception {
+	@Override
+	public final void update() throws Exception {
+		super.update();
 		synchronized (ACKQueue) {
 			if(this.ACKQueue.size() > 0){
 				int[] array = new int[this.ACKQueue.size()];
@@ -298,6 +293,10 @@ public final class Player extends Entity {
 					LoginPacket login = new LoginPacket();
 					login.parse( ipck.buffer );
 					
+					if( chunkSender.isAlive() ) {
+						break;
+					}
+					
 					name = login.username;
 					
 					if(login.protocol != MinecraftIDs.CURRENT_PROTOCOL || login.protocol2 != MinecraftIDs.CURRENT_PROTOCOL){
@@ -340,13 +339,18 @@ public final class Player extends Entity {
 				case MinecraftIDs.MOVE_PLAYER:
 					MovePlayerPacket movePlayer = new MovePlayerPacket();
 					movePlayer.parse( ipck.buffer );
-					System.out.println("MOVE_PLAYER: " + x + "," + y + "," + z);
 					x = movePlayer.x;
 					y = movePlayer.y;
 					z = movePlayer.z;
 					yaw = movePlayer.yaw;
 					pitch = movePlayer.pitch;
 					bodyYaw = movePlayer.bodyYaw;
+					break;
+				case MinecraftIDs.ANIMATE:
+					AnimatePacket ani = new AnimatePacket();
+					ani.parse( ipck.buffer );
+					ani.eid = getEID();
+					leader.player.broadcastPacket(ani, true, this);
 					break;
 			}
 		}
