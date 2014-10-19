@@ -48,22 +48,11 @@ public final class UDPServer {
 		buffer.setData(Arrays.copyOf(buffer.getData(), buffer.getLength()));
 	}
 	
-	public final void progressReceive() {
-		try {
-			byte[] buffer = new byte[102400];
-			DatagramPacket dp = new DatagramPacket(buffer, buffer.length);
-			while( !Thread.interrupted() ) {
-				try {
-					dp.setData(buffer);
-					receive(dp);
-					handlePacket(dp);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+	public final void Receive(byte[] buffer) throws Exception {
+		DatagramPacket dp = new DatagramPacket(buffer, buffer.length);
+		dp.setData(buffer);
+		receive(dp);
+		handlePacket(dp);
 	}
 	
 	private final void handlePacket(DatagramPacket packet) throws Exception {
@@ -121,5 +110,9 @@ public final class UDPServer {
 			}
 			network.leader.player.getPlayer( IP ).handleVerfiy(ACK);
 		}
+	}
+
+	public void close() {
+		socket.close();
 	}
 }

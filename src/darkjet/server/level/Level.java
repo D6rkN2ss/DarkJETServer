@@ -49,6 +49,12 @@ public final class Level {
 		}
 	}
 	
+	public final void onClose() {
+		synchronized (this) {
+			provider.onClose(); save();
+		}
+	}
+	
 	public final void save() {
 		synchronized (this) {
 			File levelDir = getLevelPath();
@@ -140,7 +146,6 @@ public final class Level {
 			int cx = x % 16;
 			int cz = z % 16;
 			chunk.setBlock(cx, (byte) y, cz, id, meta);
-			provider.saveChunk(chunk);
 		}
 	}
 

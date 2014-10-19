@@ -33,6 +33,15 @@ public final class Leader {
 		startTime = System.currentTimeMillis();
 	}
 	
+	public final void stop() {
+		network.onClose();
+		player.onClose();
+		task.onClose();
+		chat.onClose();
+		level.onClose();
+		entity.onClose();
+	}
+	
 	public abstract static class BaseManager {
 		public final Leader leader;
 		public BaseManager(Leader leader) {

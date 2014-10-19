@@ -67,7 +67,7 @@ public class BasicChunkProvider extends ChunkProvider {
 		@Override
 		public final void run() {
 			while( !isInterrupted() ) {
-				while( !decompressStack.isEmpty() ) {
+				while( !decompressStack.isEmpty() && !isInterrupted() ) {
 					BasicChunk chunk = decompressStack.pop();
 					Inflater inflater = new Inflater();
 					inflater.setInput(chunk.compressBuffer);

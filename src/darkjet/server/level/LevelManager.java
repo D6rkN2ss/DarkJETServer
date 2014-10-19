@@ -138,7 +138,7 @@ public final class LevelManager extends BaseManager {
 	@Override
 	public void onClose() {
 		for(Level BL : Levels.values() ) {
-			BL.save();
+			BL.onClose();
 		}
 	}
 }

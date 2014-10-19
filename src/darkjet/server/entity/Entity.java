@@ -13,15 +13,24 @@ public abstract class Entity {
 	protected float lastX, lastY, lastZ, lastYaw, lastPitch, lastBodyYaw;
 	protected int EID;
 	
+	private final MethodTask mt;
+	
 	public Entity(Leader leader, int EID) {
 		this.leader = leader;
 		this.EID = EID;
 		
+		
 		try {
-			leader.task.addTask( new MethodTask(-1, 1, this, "update") );
+			mt = new MethodTask(-1, 1, this, "update");
+			leader.task.addTask( mt );
 		} catch (Exception e) {
 			e.printStackTrace();
+			throw new RuntimeException();
 		}
+	}
+	
+	public void close() throws Exception {
+		leader.task.removeTask(mt);
 	}
 	
 	public void update() throws Exception {

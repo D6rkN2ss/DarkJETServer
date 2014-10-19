@@ -21,7 +21,15 @@ public final class TaskManager extends BaseManager {
 	}
 	
 	public final void addTask(Task task) {
-		Tasks.add(task);
+		synchronized (Tasks) {
+			Tasks.add(task);
+		}
+	}
+	
+	public final void removeTask(Task t) {
+		synchronized (Tasks) {
+			Tasks.remove(t);
+		}
 	}
 	
 	public final class Worker extends Thread {
@@ -33,20 +41,22 @@ public final class TaskManager extends BaseManager {
 			while ( !isInterrupted() ) {
 				try {
 					final long ST = System.currentTimeMillis();
-					for(int i = 0; i < Tasks.size(); i++) {
-						Task task = Tasks.get(i);
-						if( task.delay != 0 ) {
-							task.delay--;
-							continue;
+					synchronized (Tasks) {
+						for(int i = 0; i < Tasks.size(); i++) {
+							Task task = Tasks.get(i);
+							if( task.delay != 0 ) {
+								task.delay--;
+								continue;
+							}
+							task.onRun();
+							if( task.tick != -1) { task.tick++; }
+							if( task.tick == task.etick ) {
+								Tasks.remove(i);
+								i--;
+								continue;
+							}
+							task.delay = task.sdelay;
 						}
-						task.onRun();
-						if( task.tick != -1) { task.tick++; }
-						if( task.tick == task.etick ) {
-							Tasks.remove(i);
-							i--;
-							continue;
-						}
-						task.delay = task.sdelay;
 					}
 					final int sleep = (int) ( DEFAULT_SLEEP - (int) (System.currentTimeMillis() - ST) );
 					if( sleep > 0 ) {

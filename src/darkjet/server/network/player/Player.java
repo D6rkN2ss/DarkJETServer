@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 
+import com.sun.javafx.tk.Toolkit.Task;
+
 import darkjet.server.Leader;
 import darkjet.server.Utils;
 import darkjet.server.entity.Entity;
@@ -18,6 +20,7 @@ import darkjet.server.network.packets.minecraft.AnimatePacket;
 import darkjet.server.network.packets.minecraft.BaseMinecraftPacket;
 import darkjet.server.network.packets.minecraft.ClientConnectPacket;
 import darkjet.server.network.packets.minecraft.ClientHandshakePacket;
+import darkjet.server.network.packets.minecraft.DisconnectPacket;
 import darkjet.server.network.packets.minecraft.FullChunkDataPacket;
 import darkjet.server.network.packets.minecraft.LoginPacket;
 import darkjet.server.network.packets.minecraft.LoginStatusPacket;
@@ -28,6 +31,7 @@ import darkjet.server.network.packets.minecraft.PingPacket;
 import darkjet.server.network.packets.minecraft.PlayerEquipmentPacket;
 import darkjet.server.network.packets.minecraft.PongPacket;
 import darkjet.server.network.packets.minecraft.RemoveBlockPacket;
+import darkjet.server.network.packets.minecraft.RemovePlayerPacket;
 import darkjet.server.network.packets.minecraft.ServerHandshakePacket;
 import darkjet.server.network.packets.minecraft.SetHealthPacket;
 import darkjet.server.network.packets.minecraft.SetSpawnPositionPacket;
@@ -99,12 +103,24 @@ public final class Player extends Entity {
 		Queue.addMinecraftPacket(pak);
 	}
 	
-	public final void close() {
-		
+	@Override
+	public final void close() throws Exception {
+		DisconnectPacket dp = new DisconnectPacket();
+		Queue.addMinecraftPacket(dp); Queue.send();
+		while (chunkSender.isAlive()) {
+			chunkSender.interrupt();
+		}
+		leader.player.removePlayer(IP);
+		RemovePlayerPacket rpp = new RemovePlayerPacket();
+		rpp.eid = EID; rpp.clientID = clientID;
+		leader.player.broadcastPacket(rpp, false, this);
+		super.close();
 	}
 
-	public final void close(String reason) {
-		
+	public final void close(String reason) throws Exception {
+		MessagePacket mp = new MessagePacket(name + "was disconnected, " + reason);
+		leader.player.broadcastPacket(mp, false, this);
+		close();
 	}
 	
 	//Internal Part
@@ -293,6 +309,9 @@ public final class Player extends Entity {
 					connect.parse( ipck.buffer );
 					ServerHandshakePacket servershake = new ServerHandshakePacket(port, connect.session);
 					Queue.addMinecraftPacket(servershake);
+					break;
+				case MinecraftIDs.DISCONNECT:
+					close("Client Disconnected");
 					break;
 				case MinecraftIDs.CLIENT_HANDSHAKE:
 					ClientHandshakePacket clientshake = new ClientHandshakePacket();
