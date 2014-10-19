@@ -1,7 +1,5 @@
 package darkjet.server.entity;
 
-import java.nio.ByteBuffer;
-
 import darkjet.server.Leader;
 import darkjet.server.network.packets.minecraft.MovePlayerPacket;
 import darkjet.server.network.player.Player;
@@ -18,7 +16,7 @@ public abstract class Entity {
 		this.EID = EID;
 		
 		try {
-			leader.task.addTask( new MethodTask(-1, 3, this, "update") );
+			leader.task.addTask( new MethodTask(-1, 1, this, "update") );
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
