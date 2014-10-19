@@ -25,12 +25,12 @@ public final class Connection1Packet extends BaseLoginPacket {
 		ByteBuffer response = ByteBuffer.allocate(28);
 		byte packetID = (byte) 0x06;
 		byte security = 0;
-		short mtu = (short) nullPayload.length;
+		//short mtu = (short) nullPayload.length;
 		response.put(packetID);
 		response.put(magic);
 		response.putLong(serverID);
 		response.put(security);
-		response.putShort(mtu);
+		response.putShort((short) 3939);
 		return response.array();
 	}
 	

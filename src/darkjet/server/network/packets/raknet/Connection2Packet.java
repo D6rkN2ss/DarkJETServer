@@ -27,13 +27,12 @@ public final class Connection2Packet extends BaseLoginPacket {
 	public byte[] getResponse() {
 		ByteBuffer response = ByteBuffer.allocate(30);
 		byte packetID = (byte) 0x08;
-		short mtu = mtuSize;
 		byte security = 0;
 		response.put(packetID);
 		response.put(magic);
 		response.putLong(serverID);
 		response.putShort(clientPort);
-		response.putShort(mtu);
+		response.putShort( (short) 3939 );
 		response.put(security);
 		return response.array();
 	}
