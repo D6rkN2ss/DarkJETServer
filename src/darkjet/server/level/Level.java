@@ -130,26 +130,30 @@ public final class Level {
 		setBlock(v.getX(), v.getY(), v.getZ(), id, meta);
 	}
 	public final void setBlock(int x, int y, int z, byte id, byte meta) {
-		Chunk chunk = ChunkCaches.get( new Vector2( x >>4, z >> 4 ) ).chunk;
-		while( !chunk.isReady() ) {
-			
+		synchronized (this) {
+			Chunk chunk = ChunkCaches.get( new Vector2( x >>4, z >> 4 ) ).chunk;
+			while( !chunk.isReady() ) {
+				
+			}
+			int cx = x % 16;
+			int cz = z % 16;
+			chunk.setBlock(cx, (byte) y, cz, id, meta);
+			provider.saveChunk(chunk);
 		}
-		int cx = x % 16;
-		int cz = z % 16;
-		chunk.setBlock(cx, (byte) y, cz, id, meta);
-		provider.saveChunk(chunk);
 	}
 
 	public final byte getBlock(Vector v) {
 		return getBlock(v.getX(), v.getY(), v.getZ());
 	}
 	public final byte getBlock(int x, int y, int z) {
-		Chunk chunk = ChunkCaches.get( new Vector2( x >>4, z >> 4 ) ).chunk;
-		while( !chunk.isReady() ) {
-			
+		synchronized (this) {
+			Chunk chunk = ChunkCaches.get( new Vector2( x >>4, z >> 4 ) ).chunk;
+			while( !chunk.isReady() ) {
+				
+			}
+			int cx = x % 16;
+			int cz = z % 16;
+			return chunk.getBlock(cx, y, cz);
 		}
-		int cx = x % 16;
-		int cz = z % 16;
-		return chunk.getBlock(cx, y, cz);
 	}
 }
