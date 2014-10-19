@@ -3,6 +3,7 @@ package darkjet.server.level.chunk.provider;
 import java.io.File;
 import java.util.Stack;
 import java.util.zip.Inflater;
+
 import darkjet.server.Utils;
 import darkjet.server.level.Level;
 import darkjet.server.level.chunk.Chunk;
@@ -27,6 +28,7 @@ public class BasicChunkProvider extends ChunkProvider {
 
 	@Override
 	public Chunk loadChunk(int x, int z) {
+		System.out.println("Load " + x + "," + z);
 		if( !isGenerated(x, z) )
 		{ return null; }
 		BasicChunk chunk = new BasicChunk(x, z);
@@ -76,6 +78,7 @@ public class BasicChunkProvider extends ChunkProvider {
 						inflater.inflate( chunk.blockLights );
 						inflater.inflate( chunk.biomeIds );
 						inflater.inflate( chunk.biomeColors );
+						System.out.println( "inflate: " + chunk.x + "," + chunk.z );
 						chunk.touched = true;
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -96,7 +99,7 @@ public class BasicChunkProvider extends ChunkProvider {
 	public final static class BasicChunk extends Chunk {
 		protected boolean touched = false; //touched by Provider
 		protected byte[] compressBuffer;
-		public final boolean JustGenerated;
+		public boolean JustGenerated;
 		
 		public BasicChunk(int x, int z) {
 			this(x, z, false);
@@ -104,14 +107,20 @@ public class BasicChunkProvider extends ChunkProvider {
 		
 		public BasicChunk(int x, int z, boolean JustGenerated) {
 			super(x, z);
+			this.touched = true;
 			this.JustGenerated = JustGenerated;
 		}
 		
 		@Override
 		public byte[] getCompressed() {
 			if( (touched && wasModify) || JustGenerated) {
+				System.out.println( "BasicChunk Recompress: " + x + "," + z );
 				compressBuffer = super.getCompressed();
+				JustGenerated = false; wasModify = false;
+			} else {
+				System.out.println( "BasicChunk Cache: " + x + "," + z );
 			}
+			System.out.println( touched + ":" + wasModify + ":" + JustGenerated );
 			return compressBuffer;
 		}
 		

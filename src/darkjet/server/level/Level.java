@@ -54,11 +54,16 @@ public final class Level {
 		File Provider = new File( levelDir, "provider");
 		
 		Utils.WriteByteArraytoFile( provider.getName().getBytes() , Provider);
+		
+		for( ChunkContainer cc : ChunkCaches.values() ) {
+			provider.saveChunk(cc.chunk);
+		}
+		ChunkCaches.clear();
 	}
 	
 	public final static class ChunkContainer {
 		public int useCount = 1;
-		private Chunk chunk;
+		protected Chunk chunk;
 		
 		public ChunkContainer(Chunk chunk) {
 			this.chunk = chunk;
@@ -96,6 +101,10 @@ public final class Level {
 		return requestChunk( new Vector2(chunkX, chunkZ) );
 	}
 	
+	public final Chunk getChunk(int chunkX, int chunkZ) {
+		return ChunkCaches.get( new Vector2(chunkX, chunkZ) ).chunk;
+	}
+	
 	/**
 	 * Release chunk, If Nobody using chunk, Really Release It.
 	 * @param v2
@@ -114,5 +123,16 @@ public final class Level {
 	
 	public final File getLevelPath() {
 		return leader.level.getLevelPath(Name);
+	}
+	
+	public final void setBlock(int x, int y, int z, byte id, byte meta) {
+		Chunk chunk = ChunkCaches.get( new Vector2( x >>4, z >> 4 ) ).chunk;
+		while( !chunk.isEditable() ) {
+			
+		}
+		int cx = x % 16;
+		int cz = z % 16;
+		chunk.setBlock(cx, (byte) y, cz, id, meta);
+		provider.saveChunk(chunk);
 	}
 }

@@ -9,6 +9,7 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
+import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.Inflater;
 
@@ -96,7 +97,7 @@ public class Utils{
 	
 	public final static byte[] compressByte(byte[]... compress) throws Exception {
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
-		DeflaterOutputStream dos = new DeflaterOutputStream( bos );
+		DeflaterOutputStream dos = new DeflaterOutputStream( bos, new Deflater(4) );
 		for(byte[] ba : compress) {
 			dos.write(ba);
 		}

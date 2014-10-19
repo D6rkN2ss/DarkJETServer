@@ -161,8 +161,12 @@ public final class Player extends Entity {
 					if( !MapOrder.containsKey( distance ) ) {
 						MapOrder.put(distance, new ArrayList<Vector2>());
 					}
-					requestChunks.put(new Vector2(chunkX, chunkZ), true);
-					MapOrder.get(distance).add( new Vector2(chunkX, chunkZ) );
+					Vector2 v = new Vector2(chunkX, chunkZ);
+					requestChunks.put(v, true);
+					MapOrder.get(distance).add( v );
+					if( !useChunks.containsKey( v ) ) {
+						level.requestChunk( new Vector2(chunkX, chunkZ) );
+					}
 					orders.add(distance);
 				}
 			}
@@ -172,13 +176,10 @@ public final class Player extends Entity {
 			for( Integer i : orders ) {
 				for( Vector2 v : MapOrder.get(i) ) {
 					try {
-						if(sendCount == 56 && first) {
-							System.out.println( "Player " + name + " is ready to play!" );
-							InitPlayer();
-						}
 						if( useChunks.containsKey(v) ) { continue; }
-						useChunks.put(v, level.requestChunk(v));
+						useChunks.put(v, level.getChunk(v.getX(), v.getZ()));
 						Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(v) ) );
+						sleep(1);
 						//Resend in First Chunk Sending
 						//TODO: Minecraft Error?
 						if( first ) {
@@ -191,6 +192,10 @@ public final class Player extends Entity {
 						e.printStackTrace();
 					}
 				}
+			}
+			if(first) {
+				System.out.println( "Player " + name + " is ready to play!" );
+				InitPlayer();
 			}
 			Vector2[] v2a = useChunks.keySet().toArray(new Vector2[useChunks.keySet().size()] );
 			for( int i = 0; i < v2a.length; i++ ) {
@@ -358,6 +363,7 @@ public final class Player extends Entity {
 					RemoveBlockPacket rbp = new RemoveBlockPacket();
 					rbp.parse( ipck.buffer );
 					UpdateBlockPacket ubp = new UpdateBlockPacket(rbp.x, rbp.y, rbp.z, (byte) 0, (byte) 0);
+					level.setBlock(rbp.x, rbp.y, rbp.z, (byte) 0x00, (byte) 0x00); 
 					leader.player.broadcastPacket(ubp, false, this);
 					break;
 			}
@@ -423,7 +429,7 @@ public final class Player extends Entity {
 		 */
 		public final void addMinecraftPacket(byte[] buf) throws Exception {
 			synchronized ( this ) {
-				if( mtu < buffer.position() + buf.length + 4 ) {
+				if( mtu < buffer.position() + buf.length + 6 ) {
 					//Buffer is Empty = buf too big to send.
 					if( isEmpty() ) {
 						throw new RuntimeException("Unhandled Too Big Packet");

@@ -30,6 +30,12 @@ public class Chunk {
 		biomeColors = new byte[0x400];
 	}
 	
+	public final void setBlock(int x, byte y, int z, byte id, byte meta) {
+		System.out.println(x +","+y+","+z + "=" + ((x << 11) + (z << 7) + y) );
+		blockIDs[(x << 11) + (z << 7) + y] = id;
+		wasModify = true;
+	}
+	
 	/**
 	 * get Compressed Data for Send
 	 * @return Compressed Data
