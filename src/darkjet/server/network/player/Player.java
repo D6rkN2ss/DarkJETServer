@@ -261,6 +261,7 @@ public final class Player extends Entity {
 		//Take exist player for this
 		for( Player p : leader.player.getPlayers() ) {
 			if( p == this ) { continue; }
+			p.sendChat( name + " is Connected!" );
 			Queue.addMinecraftPacket( new AddPlayerPacket(p) );
 		}
 	}
