@@ -1,12 +1,10 @@
 package darkjet.server.network.packets.raknet;
 
 import java.io.File;
-import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 import darkjet.server.Utils;
 import darkjet.server.network.packets.BasePacket;
 
