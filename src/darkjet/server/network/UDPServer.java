@@ -28,6 +28,8 @@ public final class UDPServer {
 		try {
 			socket = new DatagramSocket(null);
 			socket.bind( new InetSocketAddress(19132) );
+			socket.setReceiveBufferSize(3939);
+			socket.setSendBufferSize(3939);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -48,7 +50,7 @@ public final class UDPServer {
 	
 	public final void progressReceive() {
 		try {
-			byte[] buffer = new byte[1539];
+			byte[] buffer = new byte[102400];
 			DatagramPacket dp = new DatagramPacket(buffer, buffer.length);
 			while( !Thread.interrupted() ) {
 				try {
