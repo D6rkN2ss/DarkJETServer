@@ -1,7 +1,9 @@
 package darkjet.server.entity;
 
+import java.nio.ByteBuffer;
+
 import darkjet.server.Leader;
-import darkjet.server.network.minecraft.MovePlayerPacket;
+import darkjet.server.network.packets.minecraft.MovePlayerPacket;
 import darkjet.server.network.player.Player;
 import darkjet.server.tasker.MethodTask;
 
@@ -16,7 +18,7 @@ public abstract class Entity {
 		this.EID = EID;
 		
 		try {
-			leader.task.addTask( new MethodTask(-1, 2, this, "update") );
+			leader.task.addTask( new MethodTask(-1, 3, this, "update") );
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -25,11 +27,15 @@ public abstract class Entity {
 	public void update() throws Exception {
 		if(x != lastX || y != lastY || z != lastZ || yaw != lastYaw || pitch != lastPitch || bodyYaw != lastBodyYaw) {
 			if( this instanceof Player ) {
-				MovePlayerPacket mpp = new MovePlayerPacket(EID, x, y, z, yaw, pitch, bodyYaw, false);
-				leader.player.broadcastPacket(mpp, (Player) this);
+				updateMovement();
 			}
 			lastX = x; lastY = y; lastZ = z; lastYaw = yaw; pitch = lastPitch; lastBodyYaw = bodyYaw;
 		}
+	}
+	
+	public void updateMovement() throws Exception {
+		MovePlayerPacket mpp = new MovePlayerPacket(EID, x, y, z, yaw, pitch, bodyYaw, false);
+		leader.player.broadcastPacket(mpp, true, (Player) this);
 	}
 
 	public float getX() {
