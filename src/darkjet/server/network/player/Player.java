@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+
 import darkjet.server.Leader;
 import darkjet.server.Utils;
 import darkjet.server.entity.Entity;
@@ -35,6 +36,7 @@ import darkjet.server.network.packets.raknet.AcknowledgePacket.NACKPacket;
 import darkjet.server.network.packets.raknet.MinecraftDataPacket;
 import darkjet.server.network.packets.raknet.RaknetIDs;
 import darkjet.server.network.packets.raknet.MinecraftDataPacket.InternalDataPacket;
+import darkjet.server.tasker.MethodTask;
 
 /**
  * Minecraft Packet Handler
@@ -85,6 +87,8 @@ public final class Player extends Entity {
 		
 		level = leader.level.getLoadedLevel("world");
 		chunkSender = new ChunkSender();
+		
+		leader.task.addTask( new MethodTask(1, 10, this, "flushQueue") );
 	}
 	
 	//External Part
@@ -197,9 +201,7 @@ public final class Player extends Entity {
 		}
 	}
 	
-	@Override
-	public final void update() throws Exception {
-		super.update();
+	public final void flushQueue() throws Exception {
 		synchronized (ACKQueue) {
 			if(this.ACKQueue.size() > 0){
 				int[] array = new int[this.ACKQueue.size()];
