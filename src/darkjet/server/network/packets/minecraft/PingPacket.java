@@ -1,5 +1,7 @@
 package darkjet.server.network.packets.minecraft;
 
+import java.nio.ByteBuffer;
+
 public final class PingPacket extends BaseMinecraftPacket {
 	public long pingID;
 	
@@ -24,6 +26,7 @@ public final class PingPacket extends BaseMinecraftPacket {
 
 	@Override
 	public byte[] getResponse() {
+		bb = ByteBuffer.allocate(9);
 		bb.put(MinecraftIDs.PING);
 		bb.putLong(pingID);
 		

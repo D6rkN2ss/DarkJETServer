@@ -79,7 +79,7 @@ public final class Player extends Entity {
 		return level;
 	}
 	
-	private final MethodTask timeoutTask = new MethodTask(20, -1, this, "checkTimeout");
+	private final MethodTask timeoutTask;
 	
 	public Player(Leader leader, String IP, int port, short mtu, long clientID) throws Exception {
 		super( leader, leader.entity.getNewEntityID() );
@@ -100,6 +100,7 @@ public final class Player extends Entity {
 		level = leader.level.getLoadedLevel("world");
 		chunkSender = new ChunkSender();
 		
+		timeoutTask = new MethodTask(-1, 20, this, "checkTimeout");
 		leader.task.addTask(timeoutTask);
 	}
 	
@@ -138,7 +139,7 @@ public final class Player extends Entity {
 	}
 
 	public final void close(String reason) throws Exception {
-		MessagePacket mp = new MessagePacket(name + "was disconnected, " + reason);
+		MessagePacket mp = new MessagePacket(name + " was disconnected, " + reason);
 		leader.player.broadcastPacket(mp, false, this);
 		close();
 	}
