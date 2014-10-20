@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.HashMap;
 
 import darkjet.server.Leader;
+import darkjet.server.Logger;
 import darkjet.server.Utils;
 import darkjet.server.entity.Entity;
 import darkjet.server.level.Level;
@@ -183,7 +184,7 @@ public final class Player extends Entity {
 				Thread.sleep(100);
 				return;
 			}
-			System.out.println("FullChunk for " + centerX + "," + centerZ);
+			Logger.print(Logger.DEBUG, "FullChunk for %d, %d", centerX, centerZ);
 			lastCX = centerX; lastCZ = centerZ;
 			int radius = 4;
 			
@@ -414,7 +415,7 @@ public final class Player extends Entity {
 					if( !(uip.face >= 0 && uip.face <= 5) ) {
 						break;
 					}
-					System.out.println( uip.item );
+					Logger.print(Logger.DEBUG, "UseItem: %d", uip.item);
 					Vector Target = new Vector(uip.x, uip.y, uip.z).getSide((byte) uip.face, 1);
 					byte TB = level.getBlock(Target);
 					if( TB == 0x00 ) {
@@ -441,7 +442,6 @@ public final class Player extends Entity {
 			}
 		} else if( ACK.getPID() == RaknetIDs.NACK ) {
 			for(int i: ACK.sequenceNumbers){
-				System.err.println( i + " love you" );
 				if( recoveryQueue.containsKey(i) ) {
 					leader.network.server.sendTo( recoveryQueue.get(i) , IP, port);
 				} else if( OftenrecoveryQueue.containsKey(i) ) { //Often Changed Movement Packet!

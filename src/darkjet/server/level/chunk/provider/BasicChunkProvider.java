@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.Stack;
 import java.util.zip.Inflater;
 
+import darkjet.server.Logger;
 import darkjet.server.Utils;
 import darkjet.server.level.Level;
 import darkjet.server.level.chunk.Chunk;
@@ -28,7 +29,7 @@ public class BasicChunkProvider extends ChunkProvider {
 
 	@Override
 	public Chunk loadChunk(int x, int z) {
-		System.out.println("Load " + x + "," + z);
+		Logger.print(Logger.DEBUG, "loadChunk (%d, %d)", x, z);
 		if( !isGenerated(x, z) )
 		{ return null; }
 		BasicChunk chunk = new BasicChunk(x, z);
@@ -78,7 +79,7 @@ public class BasicChunkProvider extends ChunkProvider {
 						inflater.inflate( chunk.blockLights );
 						inflater.inflate( chunk.biomeIds );
 						inflater.inflate( chunk.biomeColors );
-						System.out.println( "inflate: " + chunk.x + "," + chunk.z );
+						Logger.print(Logger.DEBUG, "Inflate: %d, %d", chunk.x, chunk.z);
 						chunk.touched = true;
 					} catch (Exception e) {
 						e.printStackTrace();
