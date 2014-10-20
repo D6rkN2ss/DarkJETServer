@@ -1,12 +1,15 @@
 package darkjet.server.network.player;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-
 import darkjet.server.Leader;
-import darkjet.server.Logger;
 import darkjet.server.Utils;
 import darkjet.server.entity.Entity;
 import darkjet.server.level.Level;
@@ -104,6 +107,32 @@ public final class Player extends Entity {
 		leader.task.addTask(timeoutTask);
 	}
 	
+	/*
+	 * Save
+	 * Float X
+	 * Float Y
+	 * Float Z
+	 */
+	public final void load() throws Exception {
+		if(name == null) { return; }
+		File file = leader.player.getPlayerFile(name);
+		if( !file.exists() ) { return; }
+		DataInputStream dis = new DataInputStream( new FileInputStream( file ) );
+		x = dis.readFloat();
+		y = dis.readFloat();
+		z = dis.readFloat();
+		dis.close();
+	}
+	
+	public final void save() throws Exception {
+		if(name == null) { return; }
+		DataOutputStream dos = new DataOutputStream( new FileOutputStream( leader.player.getPlayerFile(name) ) );
+		dos.writeFloat(x);
+		dos.writeFloat(y);
+		dos.writeFloat(z);
+		dos.close();
+	}
+	
 	public final void checkTimeout() throws Exception {
 		//If Client didn't send any packet in 5 second
 		if( lastPacketReceived + 5000 < System.currentTimeMillis() ) {
@@ -125,6 +154,7 @@ public final class Player extends Entity {
 	
 	@Override
 	public final void close() throws Exception {
+		save();
 		leader.task.removeTask(timeoutTask);
 		DisconnectPacket dp = new DisconnectPacket();
 		Queue.addMinecraftPacket(dp); Queue.send();
@@ -185,7 +215,6 @@ public final class Player extends Entity {
 				Thread.sleep(100);
 				return;
 			}
-			Logger.print(Logger.DEBUG, "FullChunk for %d, %d", centerX, centerZ);
 			lastCX = centerX; lastCZ = centerZ;
 			int radius = 4;
 			
@@ -233,7 +262,6 @@ public final class Player extends Entity {
 				Queue.send();
 			}
 			if(first) {
-				System.out.println( "Player " + name + " is ready to play!" );
 				InitPlayer();
 			}
 			Vector2[] v2a = useChunks.keySet().toArray(new Vector2[useChunks.keySet().size()] );
@@ -284,8 +312,7 @@ public final class Player extends Entity {
 	
 	protected void InitPlayer() throws Exception {
 		Queue.addMinecraftPacket( new SetTimePacket(0) );
-		MovePlayerPacket player = new MovePlayerPacket();
-		player.x = x; player.y = y; player.z = z;
+		MovePlayerPacket player = new MovePlayerPacket(EID, x, y, z, yaw, pitch, bodyYaw, false);
 		Queue.addMinecraftPacket(player);
 		AdventureSettingPacket adp = new AdventureSettingPacket(0x20);
 		Queue.addMinecraftPacket(adp);
@@ -349,6 +376,7 @@ public final class Player extends Entity {
 					}
 					
 					name = login.username;
+					load();
 					
 					if(login.protocol != MinecraftIDs.CURRENT_PROTOCOL || login.protocol2 != MinecraftIDs.CURRENT_PROTOCOL){
 						if(login.protocol < MinecraftIDs.CURRENT_PROTOCOL || login.protocol2 < MinecraftIDs.CURRENT_PROTOCOL){
@@ -364,13 +392,24 @@ public final class Player extends Entity {
 					//TODO Player count limit
 					Queue.addMinecraftPacket( new LoginStatusPacket(LoginStatusPacket.NORMAL) );
 					//TODO Check Player Name is Valid?
-					//TODO Check Another Location Player
+					for(Player p : leader.player.getPlayers() ) {
+						if( p.name == null || p == this ) { continue; }
+						if( p.name.equals(name) ) {
+							//Timeout?
+							if( p.IP.equals( IP ) ) {
+								p.close("Timeout?");
+							} else {
+								close("Another Position Login");
+								return;
+							}
+						}
+					}
 					
-					StartGamePacket startgame = new StartGamePacket(new Vector(128, 4, 128), new Vector(128, 4, 128), 1, 0L, 0);
+					StartGamePacket startgame = new StartGamePacket(new Vector(128, 4, 128), new Vector( (int) x, (int) y, (int) z ), 1, 0L, EID);
 					Queue.addMinecraftPacket(startgame);
 					
 					//TODO RealTime
-					SetTimePacket stp = new SetTimePacket(0);
+					SetTimePacket stp = new SetTimePacket(0x00);
 					Queue.addMinecraftPacket(stp);
 					
 					SetSpawnPositionPacket sspp = new SetSpawnPositionPacket( new Vector(128, 4, 128) );
@@ -416,7 +455,6 @@ public final class Player extends Entity {
 					if( !(uip.face >= 0 && uip.face <= 5) ) {
 						break;
 					}
-					Logger.print(Logger.DEBUG, "UseItem: %d", uip.item);
 					Vector Target = new Vector(uip.x, uip.y, uip.z).getSide((byte) uip.face, 1);
 					byte TB = level.getBlock(Target);
 					if( TB == 0x00 ) {

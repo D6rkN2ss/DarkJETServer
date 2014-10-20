@@ -3,8 +3,6 @@ package darkjet.server.level.chunk.provider;
 import java.io.File;
 import java.util.Stack;
 import java.util.zip.Inflater;
-
-import darkjet.server.Logger;
 import darkjet.server.Utils;
 import darkjet.server.level.Level;
 import darkjet.server.level.chunk.Chunk;
@@ -29,7 +27,6 @@ public class BasicChunkProvider extends ChunkProvider {
 
 	@Override
 	public Chunk loadChunk(int x, int z) {
-		Logger.print(Logger.DEBUG, "loadChunk (%d, %d)", x, z);
 		if( !isGenerated(x, z) )
 		{ return null; }
 		BasicChunk chunk = new BasicChunk(x, z);
@@ -79,7 +76,6 @@ public class BasicChunkProvider extends ChunkProvider {
 						inflater.inflate( chunk.blockLights );
 						inflater.inflate( chunk.biomeIds );
 						inflater.inflate( chunk.biomeColors );
-						Logger.print(Logger.DEBUG, "Inflate: %d, %d", chunk.x, chunk.z);
 						chunk.touched = true;
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -115,13 +111,9 @@ public class BasicChunkProvider extends ChunkProvider {
 		@Override
 		public byte[] getCompressed() {
 			if( (touched && wasModify) || JustGenerated) {
-				System.out.println( "BasicChunk Recompress: " + x + "," + z );
 				compressBuffer = super.getCompressed();
 				JustGenerated = false; wasModify = false;
-			} else {
-				System.out.println( "BasicChunk Cache: " + x + "," + z );
 			}
-			System.out.println( touched + ":" + wasModify + ":" + JustGenerated );
 			return compressBuffer;
 		}
 		

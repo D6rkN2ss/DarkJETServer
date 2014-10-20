@@ -1,5 +1,6 @@
 package darkjet.server.network.player;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -22,6 +23,7 @@ public final class PlayerManager extends BaseManager {
 	
 	public PlayerManager(Leader leader) {
 		super(leader);
+		getPlayerFolder().mkdirs();
 	}
 	
 	public final void addPlayer(Player player) {
@@ -63,10 +65,25 @@ public final class PlayerManager extends BaseManager {
 			}
 		}
 	}
+	
+	public final File getPlayerFolder() {
+		return new File(".", "players");
+	}
+	
+	public final File getPlayerFile(String name) {
+		return new File(getPlayerFolder(), name);
+	}
 
 	@Override
 	public void onClose() {
-		
+		for( Player p : getPlayers() ) {
+			try {
+				p.save();
+				p.close("Server Close");
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	@Override
