@@ -5,8 +5,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 
-import com.sun.javafx.tk.Toolkit.Task;
-
 import darkjet.server.Leader;
 import darkjet.server.Utils;
 import darkjet.server.entity.Entity;
@@ -45,6 +43,7 @@ import darkjet.server.network.packets.raknet.AcknowledgePacket.NACKPacket;
 import darkjet.server.network.packets.raknet.MinecraftDataPacket;
 import darkjet.server.network.packets.raknet.RaknetIDs;
 import darkjet.server.network.packets.raknet.MinecraftDataPacket.InternalDataPacket;
+import darkjet.server.tasker.MethodTask;
 
 /**
  * Minecraft Packet Handler
@@ -67,6 +66,8 @@ public final class Player extends Entity {
 	
 	protected final InternalDataPacketQueue Queue;
 	
+	private long lastPacketReceived = System.currentTimeMillis();
+	
 	private final ChunkSender chunkSender;
 	public final HashMap<Vector2, Chunk> getUsingChunks() {
 		return chunkSender.useChunks;
@@ -76,6 +77,8 @@ public final class Player extends Entity {
 	public final Level getLevel() {
 		return level;
 	}
+	
+	private final MethodTask timeoutTask = new MethodTask(20, -1, this, "checkTimeout");
 	
 	public Player(Leader leader, String IP, int port, short mtu, long clientID) throws Exception {
 		super( leader, leader.entity.getNewEntityID() );
@@ -95,6 +98,21 @@ public final class Player extends Entity {
 		
 		level = leader.level.getLoadedLevel("world");
 		chunkSender = new ChunkSender();
+		
+		leader.task.addTask(timeoutTask);
+	}
+	
+	public final void checkTimeout() throws Exception {
+		//If Client didn't send any packet in 5 second
+		if( lastPacketReceived + 5000 < System.currentTimeMillis() ) {
+			//Try Ping, Normal Connected Client send PongPacket for Response
+			PingPacket ping = new PingPacket();
+			Queue.addMinecraftPacket(ping);
+			//If Client didn't send any packet in 30 second
+			if( lastPacketReceived + 30000 < System.currentTimeMillis() ) {
+				close("Timeout");
+			}
+		}
 	}
 	
 	//External Part
@@ -105,6 +123,7 @@ public final class Player extends Entity {
 	
 	@Override
 	public final void close() throws Exception {
+		leader.task.removeTask(timeoutTask);
 		DisconnectPacket dp = new DisconnectPacket();
 		Queue.addMinecraftPacket(dp); Queue.send();
 		while (chunkSender.isAlive()) {
@@ -209,6 +228,7 @@ public final class Player extends Entity {
 						}
 					}
 				}
+				Queue.send();
 			}
 			if(first) {
 				System.out.println( "Player " + name + " is ready to play!" );
@@ -296,6 +316,7 @@ public final class Player extends Entity {
 		synchronized (ACKQueue) {
 			ACKQueue.add(MDP.sequenceNumber);
 		}
+		lastPacketReceived = System.currentTimeMillis();
 		for(InternalDataPacket ipck : MDP.packets){
 			if(ipck.buffer.length == 0) { continue; }
 			switch( ipck.buffer[0] ) {
@@ -413,6 +434,7 @@ public final class Player extends Entity {
 	}
 	
 	public final void handleVerfiy(AcknowledgePacket ACK) throws Exception {
+		lastPacketReceived = System.currentTimeMillis();
 		if( ACK.getPID() == RaknetIDs.ACK ) {
 			for(int i: ACK.sequenceNumbers){
 				recoveryQueue.remove(i);
