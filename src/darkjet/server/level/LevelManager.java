@@ -21,7 +21,7 @@ public final class LevelManager extends BaseManager {
 	public Class<?> DefaultProvider = null;
 	public HashMap<String, Class<?>> Providers = new HashMap<>();
 	
-	public static final File levelFolder = new File(".", "level");
+	public static final File levelFolder = new File(".", "worlds");
 	
 	public LevelManager(Leader leader) {
 		super(leader);
