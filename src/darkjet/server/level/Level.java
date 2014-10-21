@@ -34,18 +34,20 @@ public final class Level {
 	}
 	
 	public final void load() {
-		if( !leader.level.isExist(Name) ) { return; }
-		File levelDir = getLevelPath();
-		File Provider = new File( levelDir, "provider");
-		
-		String ProviderName = new String( Utils.FiletoByteArray( Provider ) );
-		@SuppressWarnings("unchecked") //Verify Action?
-		Class<ChunkProvider> provider = (Class<ChunkProvider>) leader.level.Providers.get(ProviderName);
-		try {
-			this.provider = (ChunkProvider) provider.getDeclaredConstructor(Level.class, ChunkGenerator.class).newInstance(this, leader.level.getDefaultGenerator() );
-		} catch (Exception e) {
-			e.printStackTrace();
-			throw new RuntimeException("Unvalid Level Provider");
+		synchronized (this) {
+			if( !leader.level.isExist(Name) ) { return; }
+			File levelDir = getLevelPath();
+			File Provider = new File( levelDir, "provider");
+			
+			String ProviderName = new String( Utils.FiletoByteArray( Provider ) );
+			@SuppressWarnings("unchecked") //Verify Action?
+			Class<ChunkProvider> provider = (Class<ChunkProvider>) leader.level.Providers.get(ProviderName);
+			try {
+				this.provider = (ChunkProvider) provider.getDeclaredConstructor(Level.class, ChunkGenerator.class).newInstance(this, leader.level.getDefaultGenerator() );
+			} catch (Exception e) {
+				e.printStackTrace();
+				throw new RuntimeException("Unvalid Level Provider");
+			}
 		}
 	}
 	
@@ -119,11 +121,14 @@ public final class Level {
 	 * @param v2
 	 */
 	public final void releaseChunk(Vector2 v2) {
-		if( !ChunkCaches.containsKey(v2) ) {
-			return;
-		}
-		if( ChunkCaches.get(v2).release() ) {
-			ChunkCaches.remove(v2);
+		synchronized (this) {
+			if( !ChunkCaches.containsKey(v2) ) {
+				return;
+			}
+			if( ChunkCaches.get(v2).release() ) {
+				provider.saveChunk( ChunkCaches.get(v2).chunk );
+				ChunkCaches.remove(v2);
+			}
 		}
 	}
 	public final void releaseChunk(int chunkX, int chunkZ) {

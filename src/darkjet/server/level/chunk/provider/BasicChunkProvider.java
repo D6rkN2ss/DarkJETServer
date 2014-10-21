@@ -3,6 +3,9 @@ package darkjet.server.level.chunk.provider;
 import java.io.File;
 import java.util.Stack;
 import java.util.zip.Inflater;
+
+import com.sun.org.apache.bcel.internal.classfile.InnerClass;
+
 import darkjet.server.Utils;
 import darkjet.server.level.Level;
 import darkjet.server.level.chunk.Chunk;
@@ -37,9 +40,11 @@ public class BasicChunkProvider extends ChunkProvider {
 
 	@Override
 	public boolean saveChunk(Chunk chunk) {
-		BasicChunk bc = (BasicChunk) chunk;
-		Utils.WriteByteArraytoFile(bc.getCompressed(), getChunkFile(chunk.x, chunk.z));
-		return true;
+		synchronized (chunk) {
+			BasicChunk bc = (BasicChunk) chunk;
+			Utils.WriteByteArraytoFile(bc.getCompress(true), getChunkFile(chunk.x, chunk.z));
+			return true;
+		}
 	}
 
 	@Override
@@ -70,6 +75,8 @@ public class BasicChunkProvider extends ChunkProvider {
 					Inflater inflater = new Inflater();
 					inflater.setInput(chunk.compressBuffer);
 					try {
+						//x, y
+						inflater.inflate( new byte[8] );
 						inflater.inflate( chunk.blockIDs );
 						inflater.inflate( chunk.blockDamages );
 						inflater.inflate( chunk.skyLights );
@@ -110,7 +117,11 @@ public class BasicChunkProvider extends ChunkProvider {
 		
 		@Override
 		public byte[] getCompressed() {
-			if( (touched && wasModify) || JustGenerated) {
+			return getCompress(false);
+		}
+		
+		public byte[] getCompress(boolean forcely) {
+			if( (touched && wasModify) || JustGenerated || forcely) {
 				compressBuffer = super.getCompressed();
 				JustGenerated = false; wasModify = false;
 			}

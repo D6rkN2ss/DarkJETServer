@@ -193,9 +193,14 @@ public final class Player extends Entity {
 				try {
 					updateChunk();
 					Thread.sleep(100);
+				} catch (InterruptedException ie) {
+					//It is Interrupted! Time to Out!
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
+			}
+			for( Chunk chunk : useChunks.values() ) {
+				level.releaseChunk( chunk.x, chunk.z );
 			}
 		}
 		
