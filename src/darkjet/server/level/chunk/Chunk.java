@@ -1,6 +1,6 @@
 package darkjet.server.level.chunk;
 
-import darkjet.server.Utils;
+import darkjet.server.utility.Utils;
 
 /**
  * Level <-> Chunk <-> ChunkProvider<br>

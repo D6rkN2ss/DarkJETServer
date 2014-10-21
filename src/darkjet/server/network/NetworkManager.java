@@ -1,5 +1,7 @@
 package darkjet.server.network;
 
+import java.net.SocketException;
+
 import darkjet.server.Leader;
 import darkjet.server.Leader.BaseManager;
 
@@ -11,7 +13,7 @@ public final class NetworkManager extends BaseManager {
 	public final UDPServer server;
 	private final Worker worker;
 	
-	public NetworkManager(Leader leader) {
+	public NetworkManager(Leader leader) throws Exception {
 		super(leader);
 		server = new UDPServer(this);
 		worker = new Worker();
@@ -25,6 +27,10 @@ public final class NetworkManager extends BaseManager {
 			while ( !isInterrupted() ) {
 				try {
 					server.Receive(buffer);
+				} catch (SocketException se) { 
+					if( !se.getMessage().toLowerCase().equals("socket closed") ) {
+						se.printStackTrace();
+					}
 				} catch (Exception e) {
 					e.printStackTrace();
 				}

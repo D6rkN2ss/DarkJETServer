@@ -1,6 +1,6 @@
 package darkjet.server.network.packets.minecraft;
 
-import darkjet.server.Utils;
+import darkjet.server.utility.Utils;
 
 public final class ClientHandshakePacket extends BaseMinecraftPacket {
 	public int cookie;

@@ -9,8 +9,9 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+
 import darkjet.server.Leader;
-import darkjet.server.Utils;
+import darkjet.server.Logger;
 import darkjet.server.entity.Entity;
 import darkjet.server.level.Level;
 import darkjet.server.level.chunk.Chunk;
@@ -48,6 +49,7 @@ import darkjet.server.network.packets.raknet.MinecraftDataPacket;
 import darkjet.server.network.packets.raknet.RaknetIDs;
 import darkjet.server.network.packets.raknet.MinecraftDataPacket.InternalDataPacket;
 import darkjet.server.tasker.MethodTask;
+import darkjet.server.utility.Utils;
 
 /**
  * Minecraft Packet Handler
@@ -58,6 +60,8 @@ public final class Player extends Entity {
 	public final int port;
 	public final short mtu;
 	public final long clientID;
+	
+	public boolean isLogin = false;
 	
 	public String name;
 	
@@ -154,6 +158,12 @@ public final class Player extends Entity {
 	
 	@Override
 	public final void close() throws Exception {
+		close("No reason");
+	}
+
+	public final void close(String reason) throws Exception {
+		Logger.print(Logger.INFO, "%s(%s) was disconnected, %s", name, IP, reason);
+		leader.chat.broadcastChat(String.format("%s was disconnected, %s", name, reason), this);
 		save();
 		leader.task.removeTask(timeoutTask);
 		DisconnectPacket dp = new DisconnectPacket();
@@ -161,17 +171,13 @@ public final class Player extends Entity {
 		while (chunkSender.isAlive()) {
 			chunkSender.interrupt();
 		}
-		leader.player.removePlayer(IP);
+		if(isLogin) { leader.player.removeLoginPlayer(IP); }
+		else { leader.player.removeNonLoginPlayer(IP); }
 		RemovePlayerPacket rpp = new RemovePlayerPacket();
 		rpp.eid = EID; rpp.clientID = clientID;
-		leader.player.broadcastPacket(rpp, false, this);
+		leader.player.broadcastPacket(rpp, false, true, this);
 		super.close();
-	}
-
-	public final void close(String reason) throws Exception {
-		MessagePacket mp = new MessagePacket(name + " was disconnected, " + reason);
-		leader.player.broadcastPacket(mp, false, this);
-		close();
+		
 	}
 	
 	//Internal Part
@@ -316,6 +322,10 @@ public final class Player extends Entity {
 	}
 	
 	protected void InitPlayer() throws Exception {
+		leader.player.removeNonLoginPlayer(IP);
+		leader.player.addLoginPlayer(this);
+		isLogin = true;
+		
 		Queue.addMinecraftPacket( new SetTimePacket(0) );
 		MovePlayerPacket player = new MovePlayerPacket(EID, x, y, z, yaw, pitch, bodyYaw, false);
 		Queue.addMinecraftPacket(player);
@@ -324,12 +334,13 @@ public final class Player extends Entity {
 		
 		//Add player for other Player
 		AddPlayerPacket app = new AddPlayerPacket(Player.this);
-		leader.player.broadcastPacket(app, false, Player.this);
+		leader.player.broadcastPacket(app, false, true, Player.this);
 		
-		sendChat("Welcome to DarkJET Server, " + name);
+		sendChat( leader.config.getServerWelcomeMessage().replace("@name", name) );
 		
+		Logger.print(Logger.INFO, "%s(%s) is Connected to Server!", name, IP);
 		//Take exist player for this
-		for( Player p : leader.player.getPlayers() ) {
+		for( Player p : leader.player.getLoginPlayers() ) {
 			if( p == this ) { continue; }
 			p.sendChat( name + " is Connected!" );
 			Queue.addMinecraftPacket( new AddPlayerPacket(p) );
@@ -397,7 +408,7 @@ public final class Player extends Entity {
 					//TODO Player count limit
 					Queue.addMinecraftPacket( new LoginStatusPacket(LoginStatusPacket.NORMAL) );
 					//TODO Check Player Name is Valid?
-					for(Player p : leader.player.getPlayers() ) {
+					for(Player p : leader.player.getLoginPlayers() ) {
 						if( p.name == null || p == this ) { continue; }
 						if( p.name.equals(name) ) {
 							//Timeout?
@@ -445,14 +456,14 @@ public final class Player extends Entity {
 					AnimatePacket ani = new AnimatePacket();
 					ani.parse( ipck.buffer );
 					ani.eid = getEID();
-					leader.player.broadcastPacket(ani, true, this);
+					leader.player.broadcastPacket(ani, true, true, this);
 					break;
 				case MinecraftIDs.REMOVE_BLOCK:
 					RemoveBlockPacket rbp = new RemoveBlockPacket();
 					rbp.parse( ipck.buffer );
 					UpdateBlockPacket ubp = new UpdateBlockPacket(rbp.x, rbp.y, rbp.z, (byte) 0, (byte) 0);
 					level.setBlock(rbp.x, rbp.y, rbp.z, (byte) 0x00, (byte) 0x00); 
-					leader.player.broadcastPacket(ubp, false);
+					leader.player.broadcastPacket(ubp, false, false); //for Apply Chunk Change During Sending FullChunk
 					break;
 				case MinecraftIDs.USE_ITEM:
 					UseItemPacket uip = new UseItemPacket();
@@ -465,14 +476,14 @@ public final class Player extends Entity {
 					if( TB == 0x00 ) {
 						UpdateBlockPacket uubp = new UpdateBlockPacket(Target.getX(), (byte) Target.getY(), Target.getZ(), (byte) uip.item, (byte) 0x00);
 						level.setBlock(Target, (byte) uip.item, (byte) 0x00); 
-						leader.player.broadcastPacket(uubp, false);
+						leader.player.broadcastPacket(uubp, false, false); //for Apply Chunk Change During Sending FullChunk
 					}
 					break;
 				case MinecraftIDs.PLAYER_EQUIPMENT:
 					PlayerEquipmentPacket pep = new PlayerEquipmentPacket();
 					pep.parse( ipck.buffer );
 					pep.eid = EID; pep.slot = 0;
-					leader.player.broadcastPacket(pep, false, this);
+					leader.player.broadcastPacket(pep, false, true, this);
 					break;
 			}
 		}
@@ -610,6 +621,6 @@ public final class Player extends Entity {
 	@Override
 	public void updateMovement() throws Exception {
 		MovePlayerPacket mpp = new MovePlayerPacket(EID, x, y, z, yaw, pitch, bodyYaw, false);
-		leader.player.broadcastPacket(mpp, true, (Player) this);
+		leader.player.broadcastPacket(mpp, true, true, (Player) this);
 	}
 }

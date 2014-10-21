@@ -1,4 +1,4 @@
-package darkjet.server;
+package darkjet.server.utility;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;

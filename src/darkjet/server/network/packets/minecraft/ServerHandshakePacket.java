@@ -2,7 +2,7 @@ package darkjet.server.network.packets.minecraft;
 
 import java.nio.ByteBuffer;
 
-import darkjet.server.Utils;
+import darkjet.server.utility.Utils;
 
 public final class ServerHandshakePacket extends BaseMinecraftPacket {
 	public int port;

@@ -15,9 +15,8 @@ public final class Loader {
 		while ( exit ) {
 			try {
 				String input = scanInput.readLine();
-				System.out.println(input);
 				if( input.equals("exit") ) {
-					System.out.println("Exiting...");
+					Logger.print(Logger.INFO, "Exiting...");
 					leader.stop();
 					exit = false;
 				}
@@ -25,6 +24,6 @@ public final class Loader {
 				e.printStackTrace();
 			}
 		}
-		
+		Logger.print(Logger.INFO, "Good bye!");
 	}
 }

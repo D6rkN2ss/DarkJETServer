@@ -18,41 +18,60 @@ import darkjet.server.network.packets.minecraft.BaseMinecraftPacket;
  * @author Blue Electric
  */
 public final class PlayerManager extends BaseManager {
+	//(Not) [MinecraftPacket]Logined Players
 	//<IP, Player>
-	public HashMap<String, Player> Players = new HashMap<>();
+	public HashMap<String, Player> NLPlayers = new HashMap<>();
+	public HashMap<String, Player> LPlayers = new HashMap<>();
 	
 	public PlayerManager(Leader leader) {
 		super(leader);
 		getPlayerFolder().mkdirs();
 	}
 	
-	public final void addPlayer(Player player) {
-		Players.put(player.IP, player);
+	public final void addNonLoginPlayer(Player player) {
+		NLPlayers.put(player.IP, player);
 	}
-	public final boolean existPlayer(String IP) {
-		return Players.containsKey(IP);
+	public final boolean existNonLoginPlayer(String IP) {
+		return NLPlayers.containsKey(IP);
 	}
-	public final Collection<Player> getPlayers() {
-		return Players.values();
+	public final Collection<Player> getNonLoginPlayers() {
+		return NLPlayers.values();
 	}
-	public final Player getPlayer(String IP) {
-		return Players.get(IP);
+	public final Player getNonLoginPlayer(String IP) {
+		return NLPlayers.get(IP);
 	}
-	public final void removePlayer(String IP) {
-		Players.remove(IP);
+	public final void removeNonLoginPlayer(String IP) {
+		NLPlayers.remove(IP);
 	}
+	
+	public final void addLoginPlayer(Player player) {
+		LPlayers.put(player.IP, player);
+	}
+	public final boolean existLoginPlayer(String IP) {
+		return LPlayers.containsKey(IP);
+	}
+	public final Collection<Player> getLoginPlayers() {
+		return LPlayers.values();
+	}
+	public final Player getLoginPlayer(String IP) {
+		return LPlayers.get(IP);
+	}
+	public final void removeLoginPlayer(String IP) {
+		LPlayers.remove(IP);
+	}
+	
 	public final List<Player> getPlayerInChunk(Level level, Vector pos) {
 		ArrayList<Player> Result = new ArrayList<Player>();
 		Vector2 v = new Vector2(pos.getX() >> 4, pos.getZ() >> 4);
-		for( Player p : getPlayers() ) {
+		for( Player p : getLoginPlayers() ) {
 			if( p.getLevel().Name.equals( level.Name ) && p.getUsingChunks().containsKey(v) ) {
 				Result.add(p);
 			}
 		}
 		return Result;
 	}
-	public final void broadcastPacket(BaseMinecraftPacket packet, boolean otfen, Player... Ignore) throws Exception {
-		for(Player p : getPlayers()) {
+	public final void broadcastPacket(BaseMinecraftPacket packet, boolean otfen, boolean onlyLogin, Player... Ignore) throws Exception {
+		for(Player p : getLoginPlayers()) {
 			boolean IgnoreIt = false;
 			for( Player ip : Ignore ) {
 				if( p == ip ) { IgnoreIt = true; break; }
@@ -62,6 +81,20 @@ public final class PlayerManager extends BaseManager {
 				p.Queue.sendOffenPacket(packet);
 			} else {
 				p.Queue.addMinecraftPacket(packet);
+			}
+		}
+		if( !onlyLogin ) {
+			for(Player p : getNonLoginPlayers()) {
+				boolean IgnoreIt = false;
+				for( Player ip : Ignore ) {
+					if( p == ip ) { IgnoreIt = true; break; }
+				}
+				if(IgnoreIt) { continue; }
+				if( otfen ) {
+					p.Queue.sendOffenPacket(packet);
+				} else {
+					p.Queue.addMinecraftPacket(packet);
+				}
 			}
 		}
 	}
@@ -76,7 +109,7 @@ public final class PlayerManager extends BaseManager {
 
 	@Override
 	public void onClose() {
-		for( Player p : getPlayers() ) {
+		for( Player p : getLoginPlayers() ) {
 			try {
 				p.save();
 				p.close("Server Close");

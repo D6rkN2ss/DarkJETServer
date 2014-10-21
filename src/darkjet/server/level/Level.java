@@ -1,12 +1,12 @@
 package darkjet.server.level;
 
 import darkjet.server.Leader;
-import darkjet.server.Utils;
 import darkjet.server.level.chunk.Chunk;
 import darkjet.server.level.chunk.ChunkGenerator;
 import darkjet.server.level.chunk.ChunkProvider;
 import darkjet.server.math.Vector;
 import darkjet.server.math.Vector2;
+import darkjet.server.utility.Utils;
 
 import java.io.File;
 import java.util.HashMap;
