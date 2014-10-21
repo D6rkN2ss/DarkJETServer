@@ -7,6 +7,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 
@@ -474,8 +475,8 @@ public final class Player extends Entity {
 					Vector Target = new Vector(uip.x, uip.y, uip.z).getSide((byte) uip.face, 1);
 					byte TB = level.getBlock(Target);
 					if( TB == 0x00 ) {
-						UpdateBlockPacket uubp = new UpdateBlockPacket(Target.getX(), (byte) Target.getY(), Target.getZ(), (byte) uip.item, (byte) 0x00);
-						level.setBlock(Target, (byte) uip.item, (byte) 0x00); 
+						UpdateBlockPacket uubp = new UpdateBlockPacket(Target.getX(), (byte) Target.getY(), Target.getZ(), (byte) uip.item, (byte) uip.meta);
+						level.setBlock(Target, (byte) uip.item, (byte) uip.meta);
 						leader.player.broadcastPacket(uubp, false, false); //for Apply Chunk Change During Sending FullChunk
 					}
 					break;
@@ -548,7 +549,7 @@ public final class Player extends Entity {
 		 */
 		public final void addMinecraftPacket(byte[] buf) throws Exception {
 			synchronized ( this ) {
-				if( mtu < buffer.position() + buf.length + 6 ) {
+				if( mtu < buffer.position() + buf.length + 4 ) {
 					//Buffer is Empty = buf too big to send.
 					if( isEmpty() ) {
 						throw new RuntimeException("Unhandled Too Big Packet");
@@ -597,16 +598,15 @@ public final class Player extends Entity {
 		}
 		
 		protected final byte[] send(int seq, ByteBuffer buffer) throws Exception {
-			//System.out.println("seq:" + seq);
-			int len = buffer.position();
-			buffer.position(0);
-			buffer.put( RaknetIDs.DATA_PACKET_4 );
-			buffer.put( Utils.putLTriad(seq) );
-			byte[] sendBuffer = new byte[4+len];
-			buffer.position(0);
-			buffer.get(sendBuffer);
-			leader.network.server.sendTo(sendBuffer, IP, port);
-			return sendBuffer;
+			synchronized ( this ) {
+				//System.out.println("seq:" + seq);
+				int len = buffer.position();
+				buffer.position(0);
+				buffer.put( RaknetIDs.DATA_PACKET_4 );
+				buffer.put( Utils.putLTriad(seq) );
+				leader.network.server.sendTo(buffer.array(), 4+len, IP, port);
+				return Arrays.copyOfRange(buffer.array(), 0, 4+len);
+			}
 		}
 	}
 	

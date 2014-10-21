@@ -18,6 +18,10 @@ import java.util.zip.Inflater;
  * @author BlockServer
  */
 public class Utils{
+	public final static String toBits(int b) {
+		return Integer.toBinaryString(b).replace(' ', '0');
+	}
+	
 	/**
 	 * Left-side Int
 	 * @param i Int to make Left-side

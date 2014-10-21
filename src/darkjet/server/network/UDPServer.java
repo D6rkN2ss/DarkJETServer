@@ -47,9 +47,12 @@ public final class UDPServer {
 	}
 	
 	public final void sendTo(byte[] buffer, String ip, int port) throws Exception {
-		socket.send( new DatagramPacket(buffer, buffer.length, new InetSocketAddress(ip, port)) );
+		sendTo(buffer, buffer.length, ip, port);
 	}
 	
+	public final void sendTo(byte[] buffer, int length, String ip, int port) throws Exception {
+		socket.send( new DatagramPacket(buffer, buffer.length, new InetSocketAddress(ip, port)) );
+	}
 	private final void receive(DatagramPacket buffer) throws Exception {
 		socket.receive(buffer);
 		buffer.setData(Arrays.copyOf(buffer.getData(), buffer.getLength()));
