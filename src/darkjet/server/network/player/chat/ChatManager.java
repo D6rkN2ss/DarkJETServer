@@ -14,14 +14,8 @@ public final class ChatManager extends BaseManager {
 		super(leader);
 	}
 
-	public void handleChat(Player player, String message) {
-		for(Player p : leader.player.getLoginPlayers()) {
-			try {
-				p.sendChat("<" + player.name +"> " + message);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
+	public void handleChat(Player player, String message) throws Exception {
+		broadcastChat("<" + player.name +"> " + message);
 	}
 	
 	public final void broadcastChat(String message, Player... Ignore) throws Exception {

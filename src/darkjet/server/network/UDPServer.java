@@ -50,8 +50,11 @@ public final class UDPServer {
 		sendTo(buffer, buffer.length, ip, port);
 	}
 	
+	public final Object sendLock = new Object();
 	public final void sendTo(byte[] buffer, int length, String ip, int port) throws Exception {
-		socket.send( new DatagramPacket(buffer, buffer.length, new InetSocketAddress(ip, port)) );
+		synchronized (sendLock) {
+			socket.send( new DatagramPacket(buffer, buffer.length, new InetSocketAddress(ip, port)) );
+		}
 	}
 	private final void receive(DatagramPacket buffer) throws Exception {
 		socket.receive(buffer);

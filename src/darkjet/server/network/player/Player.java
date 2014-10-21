@@ -139,15 +139,9 @@ public final class Player extends Entity {
 	}
 	
 	public final void checkTimeout() throws Exception {
-		//If Client didn't send any packet in 5 second
-		if( lastPacketReceived + 5000 < System.currentTimeMillis() ) {
-			//Try Ping, Normal Connected Client send PongPacket for Response
-			PingPacket ping = new PingPacket();
-			Queue.addMinecraftPacket(ping);
-			//If Client didn't send any packet in 30 second
-			if( lastPacketReceived + 30000 < System.currentTimeMillis() ) {
-				close("Timeout");
-			}
+		if( lastPacketReceived + 30000 < System.currentTimeMillis() ) {
+			Logger.print(Logger.DEBUG, "lastSeq %s", lastSequenceNum);
+			close("Timeout");
 		}
 	}
 	
@@ -251,6 +245,7 @@ public final class Player extends Entity {
 			}
 			Collections.sort(orders);
 
+			//int sendCount = 0;
 			synchronized (Queue) {
 				for( Integer i : orders ) {
 					for( Vector2 v : MapOrder.get(i) ) {
@@ -259,6 +254,7 @@ public final class Player extends Entity {
 							useChunks.put(v, level.getChunk(v.getX(), v.getZ()));
 							Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(v) ) );
 							sleep(1);
+							//sendCount++;
 							//Resend in First Chunk Sending
 							//TODO: Minecraft Error?
 							if( first ) {
@@ -323,8 +319,8 @@ public final class Player extends Entity {
 	}
 	
 	protected void InitPlayer() throws Exception {
-		leader.player.removeNonLoginPlayer(IP);
 		leader.player.addLoginPlayer(this);
+		leader.player.removeNonLoginPlayer(IP);
 		isLogin = true;
 		
 		Queue.addMinecraftPacket( new SetTimePacket(0) );
@@ -340,12 +336,6 @@ public final class Player extends Entity {
 		sendChat( leader.config.getServerWelcomeMessage().replace("@name", name) );
 		
 		Logger.print(Logger.INFO, "%s(%s) is Connected to Server!", name, IP);
-		//Take exist player for this
-		for( Player p : leader.player.getLoginPlayers() ) {
-			if( p == this ) { continue; }
-			p.sendChat( name + " is Connected!" );
-			Queue.addMinecraftPacket( new AddPlayerPacket(p) );
-		}
 	}
 
 	public final void handlePacket(MinecraftDataPacket MDP) throws Exception {
@@ -409,17 +399,8 @@ public final class Player extends Entity {
 					//TODO Player count limit
 					Queue.addMinecraftPacket( new LoginStatusPacket(LoginStatusPacket.NORMAL) );
 					//TODO Check Player Name is Valid?
-					for(Player p : leader.player.getLoginPlayers() ) {
-						if( p.name == null || p == this ) { continue; }
-						if( p.name.equals(name) ) {
-							//Timeout?
-							if( p.IP.equals( IP ) ) {
-								p.close("Timeout?");
-							} else {
-								close("Another Position Login");
-								return;
-							}
-						}
+					if( !leader.player.checkValid(this) ) {
+						return;
 					}
 					
 					StartGamePacket startgame = new StartGamePacket(new Vector(128, 4, 128), new Vector( (int) x, (int) y, (int) z ), 1, 0L, EID);
@@ -469,6 +450,7 @@ public final class Player extends Entity {
 				case MinecraftIDs.USE_ITEM:
 					UseItemPacket uip = new UseItemPacket();
 					uip.parse( ipck.buffer );
+					uip.eid = getEID();
 					if( !(uip.face >= 0 && uip.face <= 5) ) {
 						break;
 					}
@@ -573,8 +555,8 @@ public final class Player extends Entity {
 				InternalDataPacket idp = InternalDataPacket.wrapMCPacket(pak.getResponse(), messageIndex++);
 				directBuffer.clear(); directBuffer.position(4);
 				directBuffer.put( idp.toBinary() );
-				send(directBuffer);
 				OftenrecoveryQueue.put(sequenceNumber, idp);
+				send(directBuffer);
 			}
 		}
 		
@@ -587,10 +569,7 @@ public final class Player extends Entity {
 		}
 		
 		public final void send() throws Exception {
-			synchronized ( this ) {
-				recoveryQueue.put(sequenceNumber, send(buffer));
-				resetBuffer();
-			}
+			recoveryQueue.put(sequenceNumber, send(buffer));
 		}
 		
 		private final byte[] send(ByteBuffer buffer) throws Exception {
