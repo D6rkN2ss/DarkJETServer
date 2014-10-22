@@ -206,8 +206,8 @@ public final class Player extends Entity {
 		}
 		
 		private final void updateChunk() throws Exception {
-			int centerX = (int) Math.floor(x) >> 4;
-			int centerZ = (int) Math.floor(z) >> 4;
+			int centerX = (int) ( (int) Math.floor(x) / 16 );
+			int centerZ = (int) ( (int) Math.floor(z) / 16 );
 			
 			if( refreshAllUsed ) {
 				for( Chunk chunk : useChunks.values() ) {
@@ -229,46 +229,49 @@ public final class Player extends Entity {
 			for (int x = -radius; x <= radius; ++x) {
 				for (int z = -radius; z <= radius; ++z) {
 					int distance = (x*x) + (z*z);
+					if( distance < 13 && isLogin) { continue; }
 					int chunkX = x + centerX;
 					int chunkZ = z + centerZ;
+					Vector2 v = new Vector2(chunkX, chunkZ);
 					if( !MapOrder.containsKey( distance ) ) {
 						MapOrder.put(distance, new ArrayList<Vector2>());
 					}
-					Vector2 v = new Vector2(chunkX, chunkZ);
 					requestChunks.put(v, true);
 					MapOrder.get(distance).add( v );
 					if( !useChunks.containsKey( v ) ) {
-						level.requestChunk( new Vector2(chunkX, chunkZ) );
+						try {
+							level.getChunk(chunkX, chunkZ);
+						} catch (NullPointerException e) {
+							level.requestChunk( new Vector2(chunkX, chunkZ) );
+						}
 					}
-					orders.add(distance);
+					if( !orders.contains(distance) ) {
+						orders.add(distance);
+					}
 				}
 			}
 			Collections.sort(orders);
 
-			//int sendCount = 0;
+			int sendCount = 0;
 			synchronized (Queue) {
 				for( Integer i : orders ) {
 					for( Vector2 v : MapOrder.get(i) ) {
 						try {
-							if( useChunks.containsKey(v) ) { continue; }
-							useChunks.put(v, level.getChunk(v.getX(), v.getZ()));
-							Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(v) ) );
-							sleep(1);
-							//sendCount++;
-							//Resend in First Chunk Sending
-							//TODO: Minecraft Error?
-							if( first ) {
-								useChunks.remove(v);
-							} else if ( firstReloader ) {
-								level.releaseChunk(v);
+							if( useChunks.containsKey(v) ) {
+								continue;
 							}
+							sendCount++;
+							Queue.send();
+							Queue.addMinecraftPacket( new FullChunkDataPacket( level.getChunk(v.getX(), v.getZ()) ) );
+							Queue.send();
+							sleep(1);
 						} catch (Exception e) {
 							e.printStackTrace();
 						}
 					}
 				}
-				Queue.send();
 			}
+			Logger.print(Logger.VERBOSE, "send %d chunk(s) to %s", sendCount, name);
 			if(first) {
 				InitPlayer();
 			}
@@ -280,8 +283,6 @@ public final class Player extends Entity {
 					useChunks.remove(v);
 				}
 			}
-			if( firstReloader ) { firstReloader = false; }
-			if( first ) { firstReloader = true; }
 			first = false;
 		}
 	}
