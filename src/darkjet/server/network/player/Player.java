@@ -229,7 +229,6 @@ public final class Player extends Entity {
 			for (int x = -radius; x <= radius; ++x) {
 				for (int z = -radius; z <= radius; ++z) {
 					int distance = (x*x) + (z*z);
-					if( distance < 13 && isLogin) { continue; }
 					int chunkX = x + centerX;
 					int chunkZ = z + centerZ;
 					Vector2 v = new Vector2(chunkX, chunkZ);
@@ -262,6 +261,7 @@ public final class Player extends Entity {
 							}
 							sendCount++;
 							Queue.send();
+							useChunks.put(v, level.getChunk(v.getX(), v.getZ()));
 							Queue.addMinecraftPacket( new FullChunkDataPacket( level.getChunk(v.getX(), v.getZ()) ) );
 							Queue.send();
 							sleep(1);
