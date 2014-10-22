@@ -9,4 +9,4 @@ NOTICE: This Project may contains BlockServer or(and) PocketMine-MP's Code.
 
 Created at 2014-10-15 11:02:56
 
-Develop priority : Is run? > Features > Faster > Safer
+Develop priority : Is run? > Features > Faster > Expandable > Safer
