@@ -4,13 +4,11 @@ import java.io.File;
 import java.util.Stack;
 import java.util.zip.Inflater;
 
-import com.sun.org.apache.bcel.internal.classfile.InnerClass;
-
-import darkjet.server.Utils;
 import darkjet.server.level.Level;
 import darkjet.server.level.chunk.Chunk;
 import darkjet.server.level.chunk.ChunkGenerator;
 import darkjet.server.level.chunk.ChunkProvider;
+import darkjet.server.utility.Utils;
 
 /**
  * Basic Chunk Provider for DarkJET Server

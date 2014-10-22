@@ -6,6 +6,10 @@ public final class Logger {
 		
 	}
 	
+	public final static String Version = "0.39";
+	public final static String CodeName = "Animation-fully";
+	public final static String CodeSubName = "Good night, I'm DarkJETServer.";
+	
 	public final static int NO = 0;
 	public final static int FATAL = 1;
 	public final static int ERROR = 2;

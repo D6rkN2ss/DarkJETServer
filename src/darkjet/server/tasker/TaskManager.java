@@ -62,6 +62,8 @@ public final class TaskManager extends BaseManager {
 					if( sleep > 0 ) {
 						sleep(sleep);
 					}
+				} catch (InterruptedException ie) {
+					
 				} catch (Exception e) {
 					e.printStackTrace();
 				}

@@ -2,6 +2,7 @@ package darkjet.server.network.player.chat;
 
 import darkjet.server.Leader;
 import darkjet.server.Leader.BaseManager;
+import darkjet.server.network.packets.minecraft.MessagePacket;
 import darkjet.server.network.player.Player;
 
 /**
@@ -13,14 +14,13 @@ public final class ChatManager extends BaseManager {
 		super(leader);
 	}
 
-	public void handleChat(Player player, String message) {
-		for(Player p : leader.player.getPlayers()) {
-			try {
-				p.sendChat("<" + player.name +"> " + message);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
+	public void handleChat(Player player, String message) throws Exception {
+		broadcastChat("<" + player.name +"> " + message);
+	}
+	
+	public final void broadcastChat(String message, Player... Ignore) throws Exception {
+		MessagePacket mp = new MessagePacket(message);
+		leader.player.broadcastPacket(mp, false, true, Ignore);
 	}
 
 	@Override

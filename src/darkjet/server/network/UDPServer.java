@@ -1,9 +1,13 @@
 package darkjet.server.network;
 
+import java.net.BindException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
+import java.util.HashMap;
+
+import darkjet.server.Logger;
 import darkjet.server.network.packets.raknet.AcknowledgePacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket.ACKPacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket.NACKPacket;
@@ -23,13 +27,16 @@ public final class UDPServer {
 	public final NetworkManager network;
 	private DatagramSocket socket;
 	
-	public UDPServer(NetworkManager network) {
+	public UDPServer(NetworkManager network) throws Exception {
 		this.network = network;
 		try {
 			socket = new DatagramSocket(null);
-			socket.bind( new InetSocketAddress(19132) );
+			socket.bind( new InetSocketAddress( network.leader.config.getServerIP(), network.leader.config.getServerPort() ) );
 			socket.setReceiveBufferSize(3939);
 			socket.setSendBufferSize(3939);
+		} catch (BindException be) {
+			Logger.print(Logger.FATAL, "Failed to Bind %s:%d", "0.0.0.0", 19132);
+			throw new Exception("Failed to Bind");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -40,9 +47,15 @@ public final class UDPServer {
 	}
 	
 	public final void sendTo(byte[] buffer, String ip, int port) throws Exception {
-		socket.send( new DatagramPacket(buffer, buffer.length, new InetSocketAddress(ip, port)) );
+		sendTo(buffer, buffer.length, ip, port);
 	}
 	
+	public final Object sendLock = new Object();
+	public final void sendTo(byte[] buffer, int length, String ip, int port) throws Exception {
+		synchronized (sendLock) {
+			socket.send( new DatagramPacket(buffer, buffer.length, new InetSocketAddress(ip, port)) );
+		}
+	}
 	private final void receive(DatagramPacket buffer) throws Exception {
 		socket.receive(buffer);
 		buffer.setData(Arrays.copyOf(buffer.getData(), buffer.getLength()));
@@ -64,7 +77,7 @@ public final class UDPServer {
 			switch(RID) {
 				case RaknetIDs.UNCONNECTED_PING:
 				case RaknetIDs.UNCONNECTED_PING_OPEN_CONNECTIONS:
-					ConnectedPingPacket pingPk = new ConnectedPingPacket( "DARKJET TS", network.leader.startTime, 39L );
+					ConnectedPingPacket pingPk = new ConnectedPingPacket( network.leader.config.getServerName(), network.leader.startTime, 39L );
 					pingPk.parse( packet.getData() );
 					sendTo( pingPk.getResponse() , packet );
 					break;
@@ -86,7 +99,7 @@ public final class UDPServer {
 					connect2Pk.parse( packet.getData() );
 					sendTo( connect2Pk.getResponse(), packet );
 					Player player = new Player(network.leader, IP, packet.getPort(), connect2Pk.mtuSize, connect2Pk.clientID);
-					network.leader.player.addPlayer(player);
+					network.leader.player.addNonLoginPlayer(player);
 					break;
 				default:
 					throw new RuntimeException("Unknown Packet");
@@ -95,20 +108,24 @@ public final class UDPServer {
 		} else if( RID >= RaknetIDs.DATA_PACKET_0 && RID <= RaknetIDs.DATA_PACKET_F ) {
 			MinecraftDataPacket mdp = new MinecraftDataPacket();
 			mdp.parse( packet.getData() );
-			if( !network.leader.player.existPlayer( IP ) ) {
-				return;
+			if( network.leader.player.existNonLoginPlayer( IP ) ) {
+				network.leader.player.getNonLoginPlayer( IP ).handlePacket(mdp);
 			}
-			network.leader.player.getPlayer( IP ).handlePacket(mdp);
+			if( network.leader.player.existLoginPlayer( IP ) ) {
+				network.leader.player.getLoginPlayer( IP ).handlePacket(mdp);
+			}
 		//Verify Data Transfer
 		} else if( RID == RaknetIDs.ACK || RID == RaknetIDs.NACK ) {
 			AcknowledgePacket ACK;
 			if( RID == RaknetIDs.ACK ) { ACK = new ACKPacket(); }
 			else { ACK = new NACKPacket(); }
 			ACK.parse( packet.getData() );
-			if( !network.leader.player.existPlayer( IP ) ) {
-				return;
+			if( network.leader.player.existNonLoginPlayer( IP ) ) {
+				network.leader.player.getNonLoginPlayer( IP ).handleVerfiy(ACK);
 			}
-			network.leader.player.getPlayer( IP ).handleVerfiy(ACK);
+			if( network.leader.player.existLoginPlayer( IP ) ) {
+				network.leader.player.getLoginPlayer( IP ).handleVerfiy(ACK);
+			}
 		}
 	}
 

@@ -1,6 +1,7 @@
 package darkjet.server.level.chunk;
 
-import darkjet.server.Utils;
+import darkjet.server.Logger;
+import darkjet.server.utility.Utils;
 
 /**
  * Level <-> Chunk <-> ChunkProvider<br>
@@ -31,7 +32,20 @@ public class Chunk {
 	}
 	
 	public final void setBlock(int x, byte y, int z, byte id, byte meta) {
-		blockIDs[(x << 11) + (z << 7) + y] = id;
+		int inx = (x << 11) + (z << 7) + y;
+		blockIDs[inx] = id;
+		
+		float fi = (float) inx / 2;
+		int minx = (int) Math.floor( fi );
+		//0x0000meta
+		byte nmeta = (byte) (meta & 0x0f); //cutout first 4 bit
+		if( fi != (float) minx ) { //Nibble in Forward
+			// 0xmeta0000 | 0x0000orig = 0xmetaorig
+			blockDamages[minx] = (byte) ( (nmeta << 4) | ( blockDamages[minx] & 0x0f ) );
+		} else { //Nibble in Back
+			// 0xorig0000 | 0x0000meta = 0xorigmeta
+			blockDamages[minx] = (byte) ( ( blockDamages[minx] & 0xf0 ) | nmeta );
+		}
 		wasModify = true;
 	}
 	
