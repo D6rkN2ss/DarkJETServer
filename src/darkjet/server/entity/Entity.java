@@ -65,4 +65,8 @@ public abstract class Entity {
 	public float getPitch() {
 		return pitch;
 	}
+	
+	public float getBodyYaw() {
+		return bodyYaw;
+	}
 }

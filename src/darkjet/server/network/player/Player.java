@@ -5,10 +5,6 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import darkjet.server.Leader;
 import darkjet.server.Logger;
@@ -20,11 +16,9 @@ import darkjet.server.math.Vector2;
 import darkjet.server.network.packets.minecraft.AddPlayerPacket;
 import darkjet.server.network.packets.minecraft.AdventureSettingPacket;
 import darkjet.server.network.packets.minecraft.AnimatePacket;
-import darkjet.server.network.packets.minecraft.BaseMinecraftPacket;
 import darkjet.server.network.packets.minecraft.ClientConnectPacket;
 import darkjet.server.network.packets.minecraft.ClientHandshakePacket;
 import darkjet.server.network.packets.minecraft.DisconnectPacket;
-import darkjet.server.network.packets.minecraft.FullChunkDataPacket;
 import darkjet.server.network.packets.minecraft.LoginPacket;
 import darkjet.server.network.packets.minecraft.LoginStatusPacket;
 import darkjet.server.network.packets.minecraft.MessagePacket;
@@ -43,13 +37,9 @@ import darkjet.server.network.packets.minecraft.StartGamePacket;
 import darkjet.server.network.packets.minecraft.UpdateBlockPacket;
 import darkjet.server.network.packets.minecraft.UseItemPacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket;
-import darkjet.server.network.packets.raknet.AcknowledgePacket.ACKPacket;
-import darkjet.server.network.packets.raknet.AcknowledgePacket.NACKPacket;
 import darkjet.server.network.packets.raknet.MinecraftDataPacket;
-import darkjet.server.network.packets.raknet.RaknetIDs;
 import darkjet.server.network.packets.raknet.MinecraftDataPacket.InternalDataPacket;
 import darkjet.server.tasker.MethodTask;
-import darkjet.server.utility.Utils;
 
 /**
  * Minecraft Packet Handler
@@ -66,11 +56,6 @@ public final class Player extends Entity {
 	public String name;
 	
 	private int lastSequenceNum = 0;
-	
-	private ArrayList<Integer> ACKQueue; // Received packet queue
-	private ArrayList<Integer> NACKQueue; // Not received packet queue
-	private HashMap<Integer, byte[]> recoveryQueue;
-	private HashMap<Integer, InternalDataPacket> OftenrecoveryQueue;
 	
 	protected final InternalDataPacketQueue Queue;
 	
@@ -97,12 +82,7 @@ public final class Player extends Entity {
 		
 		x = 128F; y = 4F; z = 128F;
 		
-		ACKQueue = new ArrayList<Integer>();
-		NACKQueue = new ArrayList<Integer>();
-		recoveryQueue = new HashMap<Integer, byte[]>();
-		OftenrecoveryQueue = new HashMap<Integer, InternalDataPacket>();
-		
-		Queue = new InternalDataPacketQueue(3939);
+		Queue = new InternalDataPacketQueue(this, 3939);
 		
 		level = leader.level.getLoadedLevel("world");
 		chunkSender = new ChunkSender(this);
@@ -179,30 +159,6 @@ public final class Player extends Entity {
 	@Override
 	public final void update() throws Exception {
 		super.update();
-		synchronized (ACKQueue) {
-			if(this.ACKQueue.size() > 0){
-				int[] array = new int[this.ACKQueue.size()];
-				int offset = 0;
-				for(Integer i: ACKQueue){
-					array[offset++] = i;
-				}
-				ACKPacket pck = new ACKPacket();
-				pck.sequenceNumbers = array;
-				leader.network.server.sendTo( pck.getResponse() , IP, port);
-			}
-		}
-		synchronized (NACKQueue) {
-			if(NACKQueue.size() > 0){
-				int[] array = new int[NACKQueue.size()];
-				int offset = 0;
-				for(Integer i: NACKQueue){
-					array[offset++] = i;
-				}
-				NACKPacket pck = new NACKPacket();
-				pck.sequenceNumbers = array;
-				leader.network.server.sendTo( pck.getResponse() , IP, port);
-			}
-		}
 		if( !Queue.isEmpty() ) {
 			Queue.send();
 		}
@@ -234,14 +190,10 @@ public final class Player extends Entity {
 		}
 		else{
 			for(int i = this.lastSequenceNum; i < MDP.sequenceNumber; ++i){
-				synchronized (NACKQueue) {
-					NACKQueue.add(i);
-				}
+				Queue.addVerify(i, true);
 			}
 		}
-		synchronized (ACKQueue) {
-			ACKQueue.add(MDP.sequenceNumber);
-		}
+		Queue.addVerify(MDP.sequenceNumber, false);
 		lastPacketReceived = System.currentTimeMillis();
 		for(InternalDataPacket ipck : MDP.packets){
 			if(ipck.buffer.length == 0) { continue; }
@@ -365,119 +317,7 @@ public final class Player extends Entity {
 	
 	public final void handleVerfiy(AcknowledgePacket ACK) throws Exception {
 		lastPacketReceived = System.currentTimeMillis();
-		if( ACK.getPID() == RaknetIDs.ACK ) {
-			for(int i: ACK.sequenceNumbers){
-				recoveryQueue.remove(i);
-			}
-		} else if( ACK.getPID() == RaknetIDs.NACK ) {
-			for(int i: ACK.sequenceNumbers){
-				if( recoveryQueue.containsKey(i) ) {
-					leader.network.server.sendTo( recoveryQueue.get(i) , IP, port);
-				} else if( OftenrecoveryQueue.containsKey(i) ) { //Often Changed Movement Packet!
-					InternalDataPacket idp = OftenrecoveryQueue.get(i);
-					switch( idp.buffer[0] ) {
-						case MinecraftIDs.MOVE_PLAYER:
-							MovePlayerPacket mpp = new MovePlayerPacket(EID, x, y, z, yaw, pitch, bodyYaw, false);
-							idp.buffer = mpp.getResponse();
-							Queue.recoverOftenPacket(i, idp.toBinary());
-					}
-				}
-			}
-		} else {
-			
-		}
-	}
-	
-	public final class InternalDataPacketQueue {
-		public ByteBuffer buffer;
-		public ByteBuffer directBuffer;
-		public int sequenceNumber = 0;
-		public int messageIndex = 0;
-		public int orderIndex = 0;
-		public final int mtu;
-		
-		public InternalDataPacketQueue(int mtu) {
-			this.mtu = mtu;
-			buffer = ByteBuffer.allocate(mtu);
-			directBuffer = ByteBuffer.allocate(mtu);
-			resetBuffer();
-		}
-		
-		public final void resetBuffer() {
-			buffer.clear();
-			buffer.position(4);
-		}
-		
-		public final boolean isEmpty() {
-			return buffer.position() == 4;
-		}
-		
-		public final void addMinecraftPacket(BaseMinecraftPacket bmp) throws Exception {
-			addMinecraftPacket( bmp.getResponse() );
-		}
-		
-		/**
-		 * Add MinecraftPacket to Buffer, if Buffer is Full, send directly
-		 * @param buf
-		 */
-		public final void addMinecraftPacket(byte[] buf) throws Exception {
-			synchronized ( this ) {
-				if( mtu < buffer.position() + buf.length + 4 ) {
-					//Buffer is Empty = buf too big to send.
-					if( isEmpty() ) {
-						throw new RuntimeException("Unhandled Too Big Packet");
-					} else {
-						send();
-						//retry
-						addMinecraftPacket(buf);
-					}
-					return;
-				}
-				InternalDataPacket idp = new InternalDataPacket();
-				idp.buffer = buf;
-				idp.reliability = 2;
-				idp.messageIndex = messageIndex++;
-				buffer.put( idp.toBinary() );
-			}
-		}
-		
-		public final void sendOffenPacket(BaseMinecraftPacket pak) throws Exception {
-			synchronized ( this ) {
-				InternalDataPacket idp = InternalDataPacket.wrapMCPacket(pak.getResponse(), messageIndex++);
-				directBuffer.clear(); directBuffer.position(4);
-				directBuffer.put( idp.toBinary() );
-				OftenrecoveryQueue.put(sequenceNumber, idp);
-				send(directBuffer);
-			}
-		}
-		
-		protected final void recoverOftenPacket(int seq, byte[] buf) throws Exception {
-			synchronized ( this ) {
-				directBuffer.clear(); directBuffer.position(4);
-				directBuffer.put( buf );
-				send(seq, directBuffer);
-			}
-		}
-		
-		public final void send() throws Exception {
-			recoveryQueue.put(sequenceNumber, send(buffer));
-		}
-		
-		private final byte[] send(ByteBuffer buffer) throws Exception {
-			return send(sequenceNumber++, buffer);
-		}
-		
-		protected final byte[] send(int seq, ByteBuffer buffer) throws Exception {
-			synchronized ( this ) {
-				//System.out.println("seq:" + seq);
-				int len = buffer.position();
-				buffer.position(0);
-				buffer.put( RaknetIDs.DATA_PACKET_4 );
-				buffer.put( Utils.putLTriad(seq) );
-				leader.network.server.sendTo(buffer.array(), 4+len, IP, port);
-				return Arrays.copyOfRange(buffer.array(), 0, 4+len);
-			}
-		}
+
 	}
 	
 	public long getClientID() {
