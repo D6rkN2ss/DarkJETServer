@@ -19,6 +19,13 @@ public final class Loader {
 					Logger.print(Logger.INFO, "Exiting...");
 					leader.stop();
 					exit = false;
+				} else if( input.equals("status-dev") ) {
+					for( Thread thread : Thread.getAllStackTraces().keySet() ) {
+						Logger.print( Logger.DEBUG , "Thread %s", thread.getName() );
+						for( StackTraceElement ste : thread.getStackTrace() ) {
+							Logger.print( Logger.DEBUG , "%s, %s, %d" , ste.getClassName(), ste.getMethodName(), ste.getLineNumber());
+						}
+					}
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
