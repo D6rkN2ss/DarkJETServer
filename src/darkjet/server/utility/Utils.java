@@ -101,7 +101,7 @@ public class Utils{
 	
 	public final static byte[] compressByte(byte[]... compress) throws Exception {
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
-		DeflaterOutputStream dos = new DeflaterOutputStream( bos, new Deflater(4) );
+		DeflaterOutputStream dos = new DeflaterOutputStream( bos );
 		for(byte[] ba : compress) {
 			dos.write(ba);
 		}
