@@ -23,6 +23,7 @@ public final class ChunkSender {
 			if(sended) { return; }
 			owner.Queue.send();
 			owner.Queue.addMinecraftPacket( new FullChunkDataPacket(chunk) );
+			lastChunkSeq = owner.Queue.getSeq();
 			owner.Queue.send();
 			sended = true;
 		}
@@ -41,6 +42,8 @@ public final class ChunkSender {
 	private int totalSend = 0;
 	private boolean first = true;
 	private int lastCX = 0, lastCZ = 0;
+	private int lastChunkSeq = -1;
+	private final Object lastChunkLock = new Object();
 	
 	public ChunkSender(Player owner) {
 		this.owner = owner;
@@ -52,37 +55,53 @@ public final class ChunkSender {
 		}
 	}
 	
-	public final void updateChunk() throws Exception {
-		if( !sendOneChunk() ) {
-			refreshChunkList();
+	public final void ACKReceive(int seq) {
+		synchronized (lastChunkLock) {
+			if(seq >= lastChunkSeq) {
+				lastChunkSeq = -1;
+			}
 		}
+	}
+	
+	public final boolean updateChunk() throws Exception {
+		if( first && totalSend == 56 ) {
+			owner.InitPlayer();
+			first = false;
+		}
+		synchronized (lastChunkLock) {
+			if( lastChunkSeq != -1 ) { return false; }
+		}
+		if( !sendFourChunk() ) {
+			return refreshChunkList();
+		}
+		return true;
+	}
+	
+	private final boolean sendFourChunk() throws Exception {
+		return sendOneChunk() && sendOneChunk() && sendOneChunk() && sendOneChunk();
 	}
 	
 	private final boolean sendOneChunk() throws Exception {
 		ChunkCache cc = sendChunk.poll();
-		if( cc == null ) { //Nothing to Send :(
-			if( first && totalSend != 0 ) {
-				Logger.print(Logger.DEBUG, "Total Send: %d", totalSend);
-				owner.InitPlayer();
-				first = false;
-			}
+		if( cc == null ) {
 			return false;
-		} 
+		}
 		if( !cc.isSended() ) {
 			cc.send();
 			totalSend++;
+			Thread.sleep(1);
 		} else {
 			return sendOneChunk();
 		}
 		return true;
 	}
 	
-	private final void refreshChunkList() {
+	private final boolean refreshChunkList() {
 		int centerX = (int) ( (int) Math.floor(owner.getX()) / 16 );
 		int centerZ = (int) ( (int) Math.floor(owner.getZ()) / 16 );
 		
 		if( centerX == lastCX && centerZ == lastCZ && !first ) {
-			return;
+			return true;
 		}
 		lastCX = centerX; lastCZ = centerZ;
 		int radius = 6;
@@ -130,5 +149,6 @@ public final class ChunkSender {
 				useChunks.remove(v);
 			}
 		}
+		return false;
 	}
 }

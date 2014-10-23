@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import darkjet.server.Logger;
 import darkjet.server.network.packets.BasePacket;
 import darkjet.server.utility.Utils;
 
@@ -68,7 +69,9 @@ public abstract class AcknowledgePacket extends BasePacket {
 
 	@Override
 	public void parse() {
+		bb.get();
 		int count = bb.getShort();
+		
 		List<Integer> packets = new ArrayList<Integer>();
 		for(int i = 0; i < count && bb.position() < bb.capacity(); ++i){
 			byte[] tmp = new byte[6];

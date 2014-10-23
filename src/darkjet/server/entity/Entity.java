@@ -31,7 +31,9 @@ public abstract class Entity {
 	}
 	
 	public void close() throws Exception {
-		leader.task.removeTask(mt);
+		if( isNeedUpdate() ) {
+			leader.task.removeTask(mt);
+		}
 	}
 	
 	public void update() throws Exception {

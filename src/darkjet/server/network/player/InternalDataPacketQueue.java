@@ -4,7 +4,10 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Queue;
 
+import darkjet.server.Logger;
 import darkjet.server.network.packets.minecraft.BaseMinecraftPacket;
 import darkjet.server.network.packets.minecraft.MinecraftIDs;
 import darkjet.server.network.packets.minecraft.MovePlayerPacket;
@@ -12,6 +15,7 @@ import darkjet.server.network.packets.raknet.AcknowledgePacket.ACKPacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket.NACKPacket;
 import darkjet.server.network.packets.raknet.MinecraftDataPacket.InternalDataPacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket;
+import darkjet.server.network.packets.raknet.MinecraftDataPacket;
 import darkjet.server.network.packets.raknet.RaknetIDs;
 import darkjet.server.utility.Utils;
 
@@ -22,10 +26,12 @@ public final class InternalDataPacketQueue {
 	private int messageIndex = 0;
 	private final int mtu;
 	
-	protected ArrayList<Integer> ACKQueue; // Received packet queue
-	protected ArrayList<Integer> NACKQueue; // Not received packet queue
-	protected HashMap<Integer, byte[]> recoveryQueue;
-	protected HashMap<Integer, InternalDataPacket> OftenrecoveryQueue;
+	protected final ArrayList<Integer> ACKQueue; // Received packet queue
+	protected final ArrayList<Integer> NACKQueue; // Not received packet queue
+	protected final HashMap<Integer, byte[]> recoveryQueue;
+	protected final HashMap<Integer, InternalDataPacket> OftenrecoveryQueue;
+	
+	protected final Queue<InternalDataPacket> Packets;
 	
 	private final Player owner;
 	
@@ -39,6 +45,7 @@ public final class InternalDataPacketQueue {
 		NACKQueue = new ArrayList<Integer>();
 		recoveryQueue = new HashMap<Integer, byte[]>();
 		OftenrecoveryQueue = new HashMap<Integer, InternalDataPacket>();
+		Packets = new LinkedList<>();
 		
 		resetBuffer();
 	}
@@ -64,9 +71,27 @@ public final class InternalDataPacketQueue {
 		}
 	}
 	
+	public final void handlePacket(MinecraftDataPacket MDP) throws Exception {
+		if(MDP.sequenceNumber - owner.lastSequenceNum == 1){
+			owner.lastSequenceNum = MDP.sequenceNumber;
+		}
+		else{
+			for(int i = owner.lastSequenceNum; i < MDP.sequenceNumber; ++i){
+				addVerify(i, true);
+			}
+		}
+		addVerify(MDP.sequenceNumber, false);
+		synchronized (Packets) {
+			for( InternalDataPacket ipck : MDP.packets ) {
+				Packets.add(ipck);
+			}
+		}
+	}
+	
 	public final void handleVerify(AcknowledgePacket ACK) throws Exception {
 		if( ACK.getPID() == RaknetIDs.ACK ) {
 			for(int i: ACK.sequenceNumbers){
+				owner.chunkSender.ACKReceive(i);
 				recoveryQueue.remove(i);
 			}
 		} else if( ACK.getPID() == RaknetIDs.NACK ) {
@@ -83,8 +108,6 @@ public final class InternalDataPacketQueue {
 					}
 				}
 			}
-		} else {
-			
 		}
 	}
 	
@@ -100,6 +123,7 @@ public final class InternalDataPacketQueue {
 				pck.sequenceNumbers = array;
 				owner.leader.network.server.sendTo( pck.getResponse() , owner.IP, owner.port);
 			}
+			ACKQueue.clear();
 		}
 		synchronized (NACKQueue) {
 			if(NACKQueue.size() > 0){
@@ -112,6 +136,17 @@ public final class InternalDataPacketQueue {
 				pck.sequenceNumbers = array;
 				owner.leader.network.server.sendTo( pck.getResponse() , owner.IP, owner.port);
 			}
+			NACKQueue.clear();
+		}
+		while( !Thread.interrupted() ) {
+			InternalDataPacket ipck;
+			synchronized (Packets) {
+				ipck = Packets.poll();
+			}
+			if( ipck == null ) {
+				break;
+			}
+			owner.handlePacket(ipck);
 		}
 		if( !isEmpty() ) {
 			send();
@@ -166,6 +201,7 @@ public final class InternalDataPacketQueue {
 	}
 	
 	public final void send() throws Exception {
+		if( isEmpty() ) { return; }
 		recoveryQueue.put(sequenceNumber, send(buffer));
 	}
 	
@@ -180,8 +216,12 @@ public final class InternalDataPacketQueue {
 			buffer.position(0);
 			buffer.put( RaknetIDs.DATA_PACKET_4 );
 			buffer.put( Utils.putLTriad(seq) );
-			owner.leader.network.server.sendTo(buffer.array(), 4+len, owner.IP, owner.port);
-			return Arrays.copyOfRange(buffer.array(), 0, 4+len);
+			owner.leader.network.server.sendTo(buffer.array(), len, owner.IP, owner.port);
+			return Arrays.copyOfRange(buffer.array(), 0, len);
 		}
+	}
+	
+	protected final int getSeq() {
+		return sequenceNumber;
 	}
 }

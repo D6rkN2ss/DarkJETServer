@@ -3,6 +3,8 @@ package darkjet.server;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
+import darkjet.server.network.player.Player;
+
 /**
  * General load point of DarkJET Server
  * @author Blue Electric
@@ -25,6 +27,10 @@ public final class Loader {
 						for( StackTraceElement ste : thread.getStackTrace() ) {
 							Logger.print( Logger.DEBUG , "%s, %s, %d" , ste.getClassName(), ste.getMethodName(), ste.getLineNumber());
 						}
+					}
+				} else if( input.equals("list") ) {
+					for(Player p : leader.player.Players.values() ) {
+						Logger.print(Logger.INFO, "%s(%s)", p.name, p.IP);
 					}
 				}
 			} catch (Exception e) {

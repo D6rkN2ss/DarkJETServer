@@ -7,6 +7,7 @@ import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.HashMap;
 
+import darkjet.server.Leader;
 import darkjet.server.Logger;
 import darkjet.server.network.packets.raknet.AcknowledgePacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket.ACKPacket;
@@ -98,8 +99,13 @@ public final class UDPServer {
 					Connection2Packet connect2Pk = new Connection2Packet( 39L, (short) packet.getPort() );
 					connect2Pk.parse( packet.getData() );
 					sendTo( connect2Pk.getResponse(), packet );
+					
+					Logger.print(Logger.INFO, "New Connection from %s", IP);
+					if( network.leader.player.existPlayer(IP) ) {
+						network.leader.player.getPlayer(IP).close("Timeout?");
+					}
 					Player player = new Player(network.leader, IP, packet.getPort(), connect2Pk.mtuSize, connect2Pk.clientID);
-					network.leader.player.addNonLoginPlayer(player);
+					network.leader.player.addPlayer(player);
 					break;
 				default:
 					throw new RuntimeException("Unknown Packet");
@@ -108,11 +114,8 @@ public final class UDPServer {
 		} else if( RID >= RaknetIDs.DATA_PACKET_0 && RID <= RaknetIDs.DATA_PACKET_F ) {
 			MinecraftDataPacket mdp = new MinecraftDataPacket();
 			mdp.parse( packet.getData() );
-			if( network.leader.player.existNonLoginPlayer( IP ) ) {
-				network.leader.player.getNonLoginPlayer( IP ).handlePacket(mdp);
-			}
-			if( network.leader.player.existLoginPlayer( IP ) ) {
-				network.leader.player.getLoginPlayer( IP ).handlePacket(mdp);
+			if( network.leader.player.existPlayer( IP ) ) {
+				network.leader.player.getPlayer( IP ).Queue.handlePacket(mdp);
 			}
 		//Verify Data Transfer
 		} else if( RID == RaknetIDs.ACK || RID == RaknetIDs.NACK ) {
@@ -120,11 +123,8 @@ public final class UDPServer {
 			if( RID == RaknetIDs.ACK ) { ACK = new ACKPacket(); }
 			else { ACK = new NACKPacket(); }
 			ACK.parse( packet.getData() );
-			if( network.leader.player.existNonLoginPlayer( IP ) ) {
-				network.leader.player.getNonLoginPlayer( IP ).handleVerfiy(ACK);
-			}
-			if( network.leader.player.existLoginPlayer( IP ) ) {
-				network.leader.player.getLoginPlayer( IP ).handleVerfiy(ACK);
+			if( network.leader.player.existPlayer( IP ) ) {
+				network.leader.player.getPlayer( IP ).handleVerfiy(ACK);
 			}
 		}
 	}
