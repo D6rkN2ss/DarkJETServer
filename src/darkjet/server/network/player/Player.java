@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-
 import darkjet.server.Leader;
 import darkjet.server.Logger;
 import darkjet.server.entity.Entity;
@@ -106,7 +105,7 @@ public final class Player extends Entity {
 		Queue = new InternalDataPacketQueue(3939);
 		
 		level = leader.level.getLoadedLevel("world");
-		chunkSender = new ChunkSender();
+		chunkSender = new ChunkSender(this);
 		
 		timeoutTask = new MethodTask(-1, 20, this, "checkTimeout");
 		leader.task.addTask(timeoutTask);
@@ -176,116 +175,6 @@ public final class Player extends Entity {
 	}
 	
 	//Internal Part
-	private final class ChunkSender extends Thread {
-		public final HashMap<Vector2, Chunk> useChunks = new HashMap<>();
-		
-		private final HashMap<Integer, ArrayList<Vector2>> MapOrder = new HashMap<>();
-		private final HashMap<Vector2, Boolean> requestChunks = new HashMap<>();
-		private final ArrayList<Integer> orders = new ArrayList<>();
-		
-		public boolean first = true, firstReloader = false;;
-		public int lastCX = 0, lastCZ = 0;
-		
-		public boolean refreshAllUsed = false;
-		
-		@Override
-		public final void run() {
-			while ( !isInterrupted() ) {
-				try {
-					updateChunk();
-					Thread.sleep(100);
-				} catch (InterruptedException ie) {
-					//It is Interrupted! Time to Out!
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-			for( Chunk chunk : useChunks.values() ) {
-				level.releaseChunk( chunk.x, chunk.z );
-			}
-		}
-		
-		private final void updateChunk() throws Exception {
-			int centerX = (int) ( (int) Math.floor(x) / 16 );
-			int centerZ = (int) ( (int) Math.floor(z) / 16 );
-			
-			if( refreshAllUsed ) {
-				for( Chunk chunk : useChunks.values() ) {
-					Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(chunk) ) );
-				}
-				refreshAllUsed = false;
-				return;
-			}
-			
-			if( centerX == lastCX && centerZ == lastCZ && !first ) {
-				Thread.sleep(100);
-				return;
-			}
-			lastCX = centerX; lastCZ = centerZ;
-			int radius = 4;
-			
-			MapOrder.clear(); requestChunks.clear(); orders.clear();
-			
-			for (int x = -radius; x <= radius; ++x) {
-				for (int z = -radius; z <= radius; ++z) {
-					int distance = (x*x) + (z*z);
-					int chunkX = x + centerX;
-					int chunkZ = z + centerZ;
-					Vector2 v = new Vector2(chunkX, chunkZ);
-					if( !MapOrder.containsKey( distance ) ) {
-						MapOrder.put(distance, new ArrayList<Vector2>());
-					}
-					requestChunks.put(v, true);
-					MapOrder.get(distance).add( v );
-					if( !useChunks.containsKey( v ) ) {
-						try {
-							level.getChunk(chunkX, chunkZ);
-						} catch (NullPointerException e) {
-							level.requestChunk( new Vector2(chunkX, chunkZ) );
-						}
-					}
-					if( !orders.contains(distance) ) {
-						orders.add(distance);
-					}
-				}
-			}
-			Collections.sort(orders);
-
-			int sendCount = 0;
-			synchronized (Queue) {
-				for( Integer i : orders ) {
-					for( Vector2 v : MapOrder.get(i) ) {
-						try {
-							if( useChunks.containsKey(v) ) {
-								continue;
-							}
-							sendCount++;
-							Queue.send();
-							useChunks.put(v, level.getChunk(v.getX(), v.getZ()));
-							Queue.addMinecraftPacket( new FullChunkDataPacket( level.getChunk(v.getX(), v.getZ()) ) );
-							Queue.send();
-							sleep(1);
-						} catch (Exception e) {
-							e.printStackTrace();
-						}
-					}
-				}
-			}
-			Logger.print(Logger.VERBOSE, "send %d chunk(s) to %s", sendCount, name);
-			if(first) {
-				InitPlayer();
-			}
-			Vector2[] v2a = useChunks.keySet().toArray(new Vector2[useChunks.keySet().size()] );
-			for( int i = 0; i < v2a.length; i++ ) {
-				Vector2 v = v2a[i];
-				if( !requestChunks.containsKey( v ) ) {
-					level.releaseChunk(v);
-					useChunks.remove(v);
-				}
-			}
-			first = false;
-		}
-	}
 	
 	@Override
 	public final void update() throws Exception {
@@ -400,6 +289,7 @@ public final class Player extends Entity {
 					//TODO Player count limit
 					Queue.addMinecraftPacket( new LoginStatusPacket(LoginStatusPacket.NORMAL) );
 					//TODO Check Player Name is Valid?
+					
 					if( !leader.player.checkValid(this) ) {
 						return;
 					}
