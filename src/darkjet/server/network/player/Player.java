@@ -80,6 +80,7 @@ public final class Player extends Entity {
 		this.mtu = mtu;
 		this.clientID = clientID;
 		
+		
 		x = 128F; y = 4F; z = 128F;
 		
 		Queue = new InternalDataPacketQueue(this, 3939);
@@ -89,6 +90,17 @@ public final class Player extends Entity {
 		
 		timeoutTask = new MethodTask(-1, 20, this, "checkTimeout");
 		leader.task.addTask(timeoutTask);
+	}
+	
+	public final class Worker extends Thread {
+		public Worker() {
+			setName( "Player: " + IP);
+		}
+		
+		@Override
+		public final void run() {
+			
+		}
 	}
 	
 	/*
@@ -317,7 +329,7 @@ public final class Player extends Entity {
 	
 	public final void handleVerfiy(AcknowledgePacket ACK) throws Exception {
 		lastPacketReceived = System.currentTimeMillis();
-
+		Queue.handleVerify(ACK);
 	}
 	
 	public long getClientID() {

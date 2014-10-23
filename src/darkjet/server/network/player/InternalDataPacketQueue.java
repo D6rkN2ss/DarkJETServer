@@ -4,12 +4,14 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+
 import darkjet.server.network.packets.minecraft.BaseMinecraftPacket;
 import darkjet.server.network.packets.minecraft.MinecraftIDs;
 import darkjet.server.network.packets.minecraft.MovePlayerPacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket.ACKPacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket.NACKPacket;
 import darkjet.server.network.packets.raknet.MinecraftDataPacket.InternalDataPacket;
+import darkjet.server.network.packets.raknet.AcknowledgePacket;
 import darkjet.server.network.packets.raknet.RaknetIDs;
 import darkjet.server.utility.Utils;
 
@@ -62,7 +64,7 @@ public final class InternalDataPacketQueue {
 		}
 	}
 	
-	public final void handleVerify(ACKPacket ACK) throws Exception {
+	public final void handleVerify(AcknowledgePacket ACK) throws Exception {
 		if( ACK.getPID() == RaknetIDs.ACK ) {
 			for(int i: ACK.sequenceNumbers){
 				recoveryQueue.remove(i);
