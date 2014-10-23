@@ -23,6 +23,7 @@ public final class ConfigManager extends BaseManager {
 		DefaultConfigs.put("server-port", 19132);
 		DefaultConfigs.put("server-name", "DarkJET TS " + Logger.CodeName);
 		DefaultConfigs.put("server-welcome", "@name, Welcome to DarkJETServer");
+		DefaultConfigs.put("chunk-length", 4);
 	}
 	public final String getServerIP() {
 		return (String) Configs.get("server-ip");
@@ -35,6 +36,10 @@ public final class ConfigManager extends BaseManager {
 	}
 	public final String getServerWelcomeMessage() {
 		return (String) Configs.get("server-welcome");
+	}
+	
+	public final int getChunkLength() {
+		return (int) Configs.get("chunk-length");
 	}
 	
 	public final HashMap<String, Object> Configs;
@@ -105,18 +110,19 @@ public final class ConfigManager extends BaseManager {
 	
 	public final void save() throws Exception {
 		File config = getConfigFile();
-		HashMap<String, Object> map;
 		if( !config.exists() ) {
 			Logger.print(Logger.INFO, "No server.config file, generate deafult one.");
-			map = DefaultConfigs;
-		} else {
-			map = Configs;
+			for(String name : DefaultConfigs.keySet()) {
+				if( !Configs.containsKey(name) ) {
+					Configs.put(name, DefaultConfigs.get(name));
+				}
+			}
 		}
 		
 		BufferedWriter bw = new BufferedWriter( new FileWriter(config) );
 		
-		for( String s : map.keySet() ) {
-			bw.write( s + "=" + map.get(s).toString() + System.lineSeparator() );
+		for( String s : Configs.keySet() ) {
+			bw.write( s + "=" + Configs.get(s).toString() + System.lineSeparator() );
 		}
 		bw.close();
 	}
