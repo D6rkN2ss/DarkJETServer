@@ -3,61 +3,85 @@ package darkjet.server.network.player;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 
 import darkjet.server.Logger;
 import darkjet.server.level.chunk.Chunk;
 import darkjet.server.math.Vector2;
 import darkjet.server.network.packets.minecraft.FullChunkDataPacket;
 
-public final class ChunkSender extends Thread {
-	public final Player owner;
+public final class ChunkSender {
+	public final class ChunkCache {
+		public final Chunk chunk;
+		private boolean sended = false;
+		
+		public ChunkCache(Chunk chunk) {
+			this.chunk = chunk;
+		}
+		
+		public void send() throws Exception {
+			if(sended) { return; }
+			owner.Queue.send();
+			owner.Queue.addMinecraftPacket( new FullChunkDataPacket(chunk) );
+			owner.Queue.send();
+			sended = true;
+		}
+		public boolean isSended() {
+			return sended;
+		}
+	}
 	
-	public final HashMap<Vector2, Chunk> useChunks = new HashMap<>();
+	private final Player owner;
 	
+	protected final HashMap<Vector2, ChunkCache> useChunks = new HashMap<>();
 	private final HashMap<Integer, ArrayList<Vector2>> MapOrder = new HashMap<>();
 	private final HashMap<Vector2, Boolean> requestChunks = new HashMap<>();
 	private final ArrayList<Integer> orders = new ArrayList<>();
-	
-	public boolean first = true;
-	public int lastCX = 0, lastCZ = 0;
-	
-	public boolean refreshAllUsed = false;
+	private final LinkedList<ChunkCache> sendChunk = new LinkedList<>();
+	private int totalSend = 0;
+	private boolean first = true;
+	private int lastCX = 0, lastCZ = 0;
 	
 	public ChunkSender(Player owner) {
 		this.owner = owner;
 	}
 	
-	@Override
-	public final void run() {
-		while ( !isInterrupted() ) {
-			try {
-				updateChunk();
-				Thread.sleep(100);
-			} catch (InterruptedException ie) {
-				//It is Interrupted! Time to Out!
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-		for( Chunk chunk : useChunks.values() ) {
-			owner.level.releaseChunk( chunk.x, chunk.z );
+	public final void destroy() {
+		for( ChunkCache cc : useChunks.values() ) {
+			owner.level.releaseChunk( cc.chunk.x, cc.chunk.z );
 		}
 	}
 	
-	private final void updateChunk() throws Exception {
+	public final void updateChunk() throws Exception {
+		if( !sendOneChunk() ) {
+			refreshChunkList();
+		}
+	}
+	
+	private final boolean sendOneChunk() throws Exception {
+		ChunkCache cc = sendChunk.poll();
+		if( cc == null ) { //Nothing to Send :(
+			if( first && totalSend != 0 ) {
+				Logger.print(Logger.DEBUG, "Total Send: %d", totalSend);
+				owner.InitPlayer();
+				first = false;
+			}
+			return false;
+		} 
+		if( !cc.isSended() ) {
+			cc.send();
+			totalSend++;
+		} else {
+			return sendOneChunk();
+		}
+		return true;
+	}
+	
+	private final void refreshChunkList() {
 		int centerX = (int) ( (int) Math.floor(owner.getX()) / 16 );
 		int centerZ = (int) ( (int) Math.floor(owner.getZ()) / 16 );
 		
-		if( refreshAllUsed ) {
-			for( Chunk chunk : useChunks.values() ) {
-				owner.Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(chunk) ) );
-			}
-			refreshAllUsed = false;
-			return;
-		}
-		
 		if( centerX == lastCX && centerZ == lastCZ && !first ) {
-			Thread.sleep(100);
 			return;
 		}
 		lastCX = centerX; lastCZ = centerZ;
@@ -76,38 +100,28 @@ public final class ChunkSender extends Thread {
 				}
 				requestChunks.put(v, true);
 				MapOrder.get(distance).add( v );
-				if( !useChunks.containsKey( v ) ) {
-					owner.level.requestChunk(v);
-				}
 				if( !orders.contains(distance) ) {
 					orders.add(distance);
 				}
 			}
 		}
 		Collections.sort(orders);
-
-		int sendCount = 0;
+		
 		for( Integer i : orders ) {
 			for( Vector2 v : MapOrder.get(i) ) {
 				try {
-					if( useChunks.containsKey(v) ) {
-						continue;
+					if( useChunks.containsKey(v) ) { continue; }
+					ChunkCache cc = new ChunkCache( owner.level.requestChunk(v) );
+					useChunks.put(v, cc);
+					if( !sendChunk.contains(cc) ) {
+						sendChunk.add( cc );
 					}
-					sendCount++;
-					owner.Queue.send();
-					useChunks.put(v, owner.level.getChunk(v.getX(), v.getZ()));
-					owner.Queue.addMinecraftPacket( new FullChunkDataPacket( owner.level.getChunk(v.getX(), v.getZ()) ) );
-					owner.Queue.send();
-					sleep(1);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
 		}
-		Logger.print(Logger.VERBOSE, "send %d chunk(s) to %s", sendCount, owner.name);
-		if(first) {
-			owner.InitPlayer();
-		}
+		
 		Vector2[] v2a = useChunks.keySet().toArray(new Vector2[useChunks.keySet().size()] );
 		for( int i = 0; i < v2a.length; i++ ) {
 			Vector2 v = v2a[i];
@@ -116,6 +130,5 @@ public final class ChunkSender extends Thread {
 				useChunks.remove(v);
 			}
 		}
-		first = false;
 	}
 }

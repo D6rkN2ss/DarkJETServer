@@ -13,19 +13,20 @@ public abstract class Entity {
 	protected float lastX, lastY, lastZ, lastYaw, lastPitch, lastBodyYaw;
 	protected int EID;
 	
-	private final MethodTask mt;
+	private MethodTask mt;
 	
 	public Entity(Leader leader, int EID) {
 		this.leader = leader;
 		this.EID = EID;
 		
-		
-		try {
-			mt = new MethodTask(-1, 1, this, "update");
-			leader.task.addTask( mt );
-		} catch (Exception e) {
-			e.printStackTrace();
-			throw new RuntimeException();
+		if( isNeedUpdate() ) {
+			try {
+				mt = new MethodTask(-1, 1, this, "update");
+				leader.task.addTask( mt );
+			} catch (Exception e) {
+				e.printStackTrace();
+				throw new RuntimeException();
+			}
 		}
 	}
 	
@@ -69,4 +70,6 @@ public abstract class Entity {
 	public float getBodyYaw() {
 		return bodyYaw;
 	}
+	
+	protected abstract boolean isNeedUpdate();
 }

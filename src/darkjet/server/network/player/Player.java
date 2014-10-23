@@ -10,7 +10,6 @@ import darkjet.server.Leader;
 import darkjet.server.Logger;
 import darkjet.server.entity.Entity;
 import darkjet.server.level.Level;
-import darkjet.server.level.chunk.Chunk;
 import darkjet.server.math.Vector;
 import darkjet.server.math.Vector2;
 import darkjet.server.network.packets.minecraft.AddPlayerPacket;
@@ -39,6 +38,7 @@ import darkjet.server.network.packets.minecraft.UseItemPacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket;
 import darkjet.server.network.packets.raknet.MinecraftDataPacket;
 import darkjet.server.network.packets.raknet.MinecraftDataPacket.InternalDataPacket;
+import darkjet.server.network.player.ChunkSender.ChunkCache;
 import darkjet.server.tasker.MethodTask;
 
 /**
@@ -61,8 +61,9 @@ public final class Player extends Entity {
 	
 	private long lastPacketReceived = System.currentTimeMillis();
 	
+	private final Worker worker;
 	private final ChunkSender chunkSender;
-	public final HashMap<Vector2, Chunk> getUsingChunks() {
+	public final HashMap<Vector2, ChunkCache> getUsingChunks() {
 		return chunkSender.useChunks;
 	}
 	
@@ -80,7 +81,6 @@ public final class Player extends Entity {
 		this.mtu = mtu;
 		this.clientID = clientID;
 		
-		
 		x = 128F; y = 4F; z = 128F;
 		
 		Queue = new InternalDataPacketQueue(this, 3939);
@@ -90,6 +90,9 @@ public final class Player extends Entity {
 		
 		timeoutTask = new MethodTask(-1, 20, this, "checkTimeout");
 		leader.task.addTask(timeoutTask);
+		
+		worker = new Worker();
+		worker.start();
 	}
 	
 	public final class Worker extends Thread {
@@ -99,7 +102,21 @@ public final class Player extends Entity {
 		
 		@Override
 		public final void run() {
-			
+			while ( !isInterrupted() ) {
+				try {
+					if( name != null ) {
+					chunkSender.updateChunk();
+					}
+					if( name == null || isLogin ) {
+						Queue.update();
+					}
+					Thread.sleep(1);
+				} catch (InterruptedException ie) { 
+					break;
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
 		}
 	}
 	
@@ -151,12 +168,13 @@ public final class Player extends Entity {
 		Logger.print(Logger.INFO, "%s(%s) was disconnected, %s", name, IP, reason);
 		leader.chat.broadcastChat(String.format("%s was disconnected, %s", name, reason), this);
 		save();
+		while( worker.isAlive() ) {
+			worker.interrupt();
+		}
 		leader.task.removeTask(timeoutTask);
 		DisconnectPacket dp = new DisconnectPacket();
 		Queue.addMinecraftPacket(dp); Queue.send();
-		while (chunkSender.isAlive()) {
-			chunkSender.interrupt();
-		}
+		chunkSender.destroy();
 		if(isLogin) { leader.player.removeLoginPlayer(IP); }
 		else { leader.player.removeNonLoginPlayer(IP); }
 		RemovePlayerPacket rpp = new RemovePlayerPacket();
@@ -167,14 +185,6 @@ public final class Player extends Entity {
 	}
 	
 	//Internal Part
-	
-	@Override
-	public final void update() throws Exception {
-		super.update();
-		if( !Queue.isEmpty() ) {
-			Queue.send();
-		}
-	}
 	
 	protected void InitPlayer() throws Exception {
 		leader.player.addLoginPlayer(this);
@@ -231,11 +241,7 @@ public final class Player extends Entity {
 				case MinecraftIDs.LOGIN:
 					LoginPacket login = new LoginPacket();
 					login.parse( ipck.buffer );
-					
-					if( chunkSender.isAlive() ) {
-						break;
-					}
-					
+					if(name != null) { break; }
 					name = login.username;
 					load();
 					
@@ -270,9 +276,8 @@ public final class Player extends Entity {
 					
 					SetHealthPacket shp = new SetHealthPacket((byte) 0x20);
 					Queue.addMinecraftPacket(shp);
-					
-					chunkSender.start();
 
+					worker.setName("Player: " + name);
 					break;
 				case MinecraftIDs.MESSAGE:
 					MessagePacket message = new MessagePacket();
@@ -344,5 +349,10 @@ public final class Player extends Entity {
 	public void updateMovement() throws Exception {
 		MovePlayerPacket mpp = new MovePlayerPacket(EID, x, y, z, yaw, pitch, bodyYaw, false);
 		leader.player.broadcastPacket(mpp, true, true, (Player) this);
+	}
+
+	@Override
+	protected boolean isNeedUpdate() {
+		return false;
 	}
 }

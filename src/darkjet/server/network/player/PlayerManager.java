@@ -122,9 +122,15 @@ public final class PlayerManager extends BaseManager {
 
 	@Override
 	public void onClose() {
+		for( Player p : NLPlayers.values() ) {
+			try {
+				p.close("Server Close");
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
 		for( Player p : LPlayers.values() ) {
 			try {
-				p.save();
 				p.close("Server Close");
 			} catch (Exception e) {
 				e.printStackTrace();

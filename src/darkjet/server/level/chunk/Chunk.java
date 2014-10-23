@@ -1,6 +1,5 @@
 package darkjet.server.level.chunk;
 
-import darkjet.server.Logger;
 import darkjet.server.utility.Utils;
 
 /**

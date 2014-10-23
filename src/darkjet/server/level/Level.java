@@ -148,8 +148,9 @@ public final class Level {
 			while( !chunk.isReady() ) {
 				
 			}
-			int cx = x % 16;
-			int cz = z % 16;
+			int cx = Math.abs(x) % 16;
+			int cz = Math.abs(z) % 16;
+			//cx = Math.abs(cx); cz = Math.abs(cz);
 			chunk.setBlock(cx, (byte) y, cz, id, meta);
 		}
 	}

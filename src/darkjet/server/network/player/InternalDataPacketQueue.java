@@ -113,6 +113,9 @@ public final class InternalDataPacketQueue {
 				owner.leader.network.server.sendTo( pck.getResponse() , owner.IP, owner.port);
 			}
 		}
+		if( !isEmpty() ) {
+			send();
+		}
 	}
 	
 	public final void addMinecraftPacket(BaseMinecraftPacket bmp) throws Exception {
