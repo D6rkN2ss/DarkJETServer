@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
-
-import darkjet.server.Logger;
 import darkjet.server.level.chunk.Chunk;
 import darkjet.server.math.Vector2;
 import darkjet.server.network.packets.minecraft.FullChunkDataPacket;

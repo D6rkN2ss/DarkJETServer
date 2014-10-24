@@ -144,7 +144,11 @@ public final class Level {
 	}
 	public final void setBlock(int x, int y, int z, byte id, byte meta) {
 		synchronized (this) {
-			Chunk chunk = ChunkCaches.get( new Vector2( x >>4, z >> 4 ) ).chunk;
+			Vector2 cv = new Vector2( x >>4, z >> 4 );
+			Chunk chunk = ChunkCaches.get( cv ).chunk;
+			if( chunk == null ) {
+				chunk = requestChunk( cv );
+			}
 			while( !chunk.isReady() ) {
 				
 			}

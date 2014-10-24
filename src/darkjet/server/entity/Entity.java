@@ -18,6 +18,7 @@ public abstract class Entity {
 	public Entity(Leader leader, int EID) {
 		this.leader = leader;
 		this.EID = EID;
+		leader.entity.addEntity( this );
 		
 		if( isNeedUpdate() ) {
 			try {
@@ -43,6 +44,7 @@ public abstract class Entity {
 		}
 	}
 	
+	public abstract boolean checkInside(int x, int y, int z);
 	public abstract void updateMovement() throws Exception;
 
 	public float getX() {

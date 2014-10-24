@@ -32,6 +32,12 @@ public final class Loader {
 					for(Player p : leader.player.Players.values() ) {
 						Logger.print(Logger.INFO, "%s(%s)", p.name, p.IP);
 					}
+				} else if( input.equals("dump") ) {
+					Player p = leader.player.getPlayer("192.168.1.3");
+					if(p == null) {
+						break;
+					}
+					Logger.print(Logger.INFO, "%d, %d, %d", p.getX(), p.getY(), p.getZ());
 				}
 			} catch (Exception e) {
 				e.printStackTrace();

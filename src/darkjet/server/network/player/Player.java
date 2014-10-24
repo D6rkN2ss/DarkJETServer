@@ -6,9 +6,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.HashMap;
+
 import darkjet.server.Leader;
 import darkjet.server.Logger;
 import darkjet.server.entity.Entity;
+import darkjet.server.item.Item;
 import darkjet.server.level.Level;
 import darkjet.server.math.Vector;
 import darkjet.server.math.Vector2;
@@ -200,6 +202,15 @@ public final class Player extends Entity {
 		
 		Logger.print(Logger.INFO, "%s(%s) is Connected to Server!", name, IP);
 	}
+	
+	public final boolean checkInside(int x, int y, int z) {
+		if( this.x - 0.5 > x && this.x + 0.5 < x &&
+			this.y > y && this.y + 2 < y &&
+			this.z - 0.5 > z && this.z + 0.5 < z) {
+			return true;
+		}
+		return false;
+	}
 
 	public final void handlePacket(InternalDataPacket ipck) throws Exception {
 		lastPacketReceived = System.currentTimeMillis();
@@ -296,16 +307,8 @@ public final class Player extends Entity {
 				UseItemPacket uip = new UseItemPacket();
 				uip.parse( ipck.buffer );
 				uip.eid = getEID();
-				if( !(uip.face >= 0 && uip.face <= 5) ) {
-					break;
-				}
-				Vector Target = new Vector(uip.x, uip.y, uip.z).getSide((byte) uip.face, 1);
-				byte TB = level.getBlock(Target);
-				if( TB == 0x00 ) {
-					UpdateBlockPacket uubp = new UpdateBlockPacket(Target.getX(), (byte) Target.getY(), Target.getZ(), (byte) uip.item, (byte) uip.meta);
-					level.setBlock(Target, (byte) uip.item, (byte) uip.meta);
-					leader.player.broadcastPacket(uubp, false);
-				}
+				Item item = Item.getItem(uip.item, uip.meta, uip.face);
+				item.use(new Vector(uip.x, uip.y, uip.z), this, level);
 				break;
 			case MinecraftIDs.PLAYER_EQUIPMENT:
 				PlayerEquipmentPacket pep = new PlayerEquipmentPacket();
