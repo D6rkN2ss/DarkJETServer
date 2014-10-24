@@ -188,7 +188,7 @@ public final class Player extends Entity {
 		leader.player.noticeLogin(this);
 		isLogin = true;
 		
-		Queue.addMinecraftPacket( new SetTimePacket(0) );
+		Queue.addMinecraftPacket( new SetTimePacket( level.getTime() ) );
 		MovePlayerPacket player = new MovePlayerPacket(EID, x, y, z, yaw, pitch, bodyYaw, false);
 		Queue.addMinecraftPacket(player);
 		AdventureSettingPacket adp = new AdventureSettingPacket(0x20);
@@ -261,9 +261,8 @@ public final class Player extends Entity {
 				
 				StartGamePacket startgame = new StartGamePacket(new Vector(128, 4, 128), new Vector( (int) x, (int) y, (int) z ), 1, 0L, EID);
 				Queue.addMinecraftPacket(startgame);
-				
-				//TODO RealTime
-				SetTimePacket stp = new SetTimePacket(0x00);
+
+				SetTimePacket stp = new SetTimePacket( level.getTime() );
 				Queue.addMinecraftPacket(stp);
 				
 				SetSpawnPositionPacket sspp = new SetSpawnPositionPacket( new Vector(128, 4, 128) );

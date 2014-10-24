@@ -7,7 +7,6 @@ import darkjet.server.level.chunk.ChunkProvider;
 import darkjet.server.math.Vector;
 import darkjet.server.math.Vector2;
 import darkjet.server.utility.Utils;
-
 import java.io.File;
 import java.util.HashMap;
 
@@ -20,6 +19,9 @@ public final class Level {
 	
 	public final String Name;
 	protected ChunkProvider provider;
+	
+	public short worldTime = 0;
+	public long lastWorldTime = 0;
 	
 	public HashMap<Vector2, ChunkContainer> ChunkCaches = new HashMap<>();
 	
@@ -173,4 +175,11 @@ public final class Level {
 			return chunk.getBlock(cx, y, cz);
 		}
 	}
+	
+	public final short getTime() {
+		short result = (short) (( worldTime + (( Math.floor(System.currentTimeMillis() - lastWorldTime) / 1000) * 2.5) ) % 24000);
+		worldTime = result;
+		lastWorldTime = System.currentTimeMillis();
+		return result;
+ 	}
 }
