@@ -150,8 +150,12 @@ public final class Player extends Entity {
 	}
 	
 	public final void checkTimeout() throws Exception {
-		if( lastPacketReceived + 30000 < System.currentTimeMillis() ) {
-			close("Timeout");
+		if( lastPacketReceived + 5000 < System.currentTimeMillis() ) {
+			PingPacket ping = new PingPacket( System.currentTimeMillis() );
+			Queue.addMinecraftPacket(ping);
+			if( lastPacketReceived + 30000 < System.currentTimeMillis() ) {
+				close("Timeout");
+			}
 		}
 	}
 	
@@ -188,7 +192,7 @@ public final class Player extends Entity {
 		leader.player.noticeLogin(this);
 		isLogin = true;
 		
-		Queue.addMinecraftPacket( new SetTimePacket( level.getTime() ) );
+		level.sendTime(this);
 		MovePlayerPacket player = new MovePlayerPacket(EID, x, y, z, yaw, pitch, bodyYaw, false);
 		Queue.addMinecraftPacket(player);
 		AdventureSettingPacket adp = new AdventureSettingPacket(0x20);
@@ -262,8 +266,7 @@ public final class Player extends Entity {
 				StartGamePacket startgame = new StartGamePacket(new Vector(128, 4, 128), new Vector( (int) x, (int) y, (int) z ), 1, 0L, EID);
 				Queue.addMinecraftPacket(startgame);
 
-				SetTimePacket stp = new SetTimePacket( level.getTime() );
-				Queue.addMinecraftPacket(stp);
+				level.sendTime(this);
 				
 				SetSpawnPositionPacket sspp = new SetSpawnPositionPacket( new Vector(128, 4, 128) );
 				Queue.addMinecraftPacket(sspp);

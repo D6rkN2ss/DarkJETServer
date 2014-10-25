@@ -6,9 +6,16 @@ import darkjet.server.level.chunk.ChunkGenerator;
 import darkjet.server.level.chunk.ChunkProvider;
 import darkjet.server.math.Vector;
 import darkjet.server.math.Vector2;
+import darkjet.server.network.packets.minecraft.SetTimePacket;
+import darkjet.server.network.player.Player;
+import darkjet.server.tasker.MethodTask;
 import darkjet.server.utility.Utils;
+
 import java.io.File;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
+
+import com.sun.xml.internal.fastinfoset.algorithm.BuiltInEncodingAlgorithm.WordListener;
 
 /**
  * Chunk (Caching) Manager
@@ -21,17 +28,22 @@ public final class Level {
 	protected ChunkProvider provider;
 	
 	public short worldTime = 0;
-	public long lastWorldTime = 0;
+	private final Object worldTimeLocker = new Object();
 	
 	public HashMap<Vector2, ChunkContainer> ChunkCaches = new HashMap<>();
 	
 	public Level(Leader leader, String Name) {
 		this.leader = leader;
 		this.Name = Name;
+		
+		try {
+			leader.task.addTask( new MethodTask(-1, 10, this, "updateTime") );
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 	public Level(Leader leader, String Name, ChunkProvider provider) {
-		this.leader = leader;
-		this.Name = Name;
+		this(leader, Name);
 		this.provider = provider;
 	}
 	
@@ -40,8 +52,13 @@ public final class Level {
 			if( !leader.level.isExist(Name) ) { return; }
 			File levelDir = getLevelPath();
 			File Provider = new File( levelDir, "provider");
+			File Time = new File( levelDir, "time" );
 			
 			String ProviderName = new String( Utils.FiletoByteArray( Provider ) );
+			ByteBuffer bb = ByteBuffer.allocate(2);
+			bb.put( Utils.FiletoByteArray(Time) ); bb.position(0);
+			worldTime = bb.getShort();
+			
 			@SuppressWarnings("unchecked") //Verify Action?
 			Class<ChunkProvider> provider = (Class<ChunkProvider>) leader.level.Providers.get(ProviderName);
 			try {
@@ -64,8 +81,10 @@ public final class Level {
 			File levelDir = getLevelPath();
 			levelDir.mkdirs();
 			File Provider = new File( levelDir, "provider");
+			File Time = new File( levelDir, "time" );
 			
 			Utils.WriteByteArraytoFile( provider.getName().getBytes() , Provider);
+			Utils.WriteByteArraytoFile( ByteBuffer.allocate(2).putShort(worldTime).array() , Time);
 			
 			for( ChunkContainer cc : ChunkCaches.values() ) {
 				provider.saveChunk(cc.chunk);
@@ -176,10 +195,26 @@ public final class Level {
 		}
 	}
 	
-	public final short getTime() {
-		short result = (short) (( worldTime + (( Math.floor(System.currentTimeMillis() - lastWorldTime) / 1000) * 2.5) ) % 24000);
-		worldTime = result;
-		lastWorldTime = System.currentTimeMillis();
-		return result;
- 	}
+	public final void sendTime() throws Exception {
+		synchronized (worldTimeLocker) {
+			leader.player.broadcastPacket(new SetTimePacket( worldTime ), false);
+		}
+	}
+	
+	public final void sendTime(Player p) throws Exception {
+		synchronized (worldTimeLocker) {
+			p.Queue.addMinecraftPacket( new SetTimePacket( worldTime ) );
+		}
+		
+	}
+	
+	public final void updateTime() throws Exception {
+		setTime((short) (worldTime+10));
+	}
+	
+	public final void setTime(short time) throws Exception {
+		worldTime = time;
+		worldTime = (short) (worldTime % 24000);
+		sendTime();
+	}
 }
