@@ -8,9 +8,11 @@ import darkjet.server.level.chunk.ChunkProvider;
 import darkjet.server.math.Vector;
 import darkjet.server.math.Vector2;
 import darkjet.server.network.packets.minecraft.SetTimePacket;
+import darkjet.server.network.packets.minecraft.UpdateBlockPacket;
 import darkjet.server.network.player.Player;
 import darkjet.server.tasker.MethodTask;
 import darkjet.server.utility.Utils;
+
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -209,13 +211,15 @@ public final class Level {
 		}
 	}
 	
-	public final void updateTime() throws Exception {
+	public final void updateTime(long currentTick) throws Exception {
 		setTime((short) (worldTime+2.5));
+		if( currentTick % 200 == 0 ) {
+			sendTime();
+		}
 	}
 	
 	public final void setTime(short time) throws Exception {
 		worldTime = time;
 		worldTime = (worldTime % 24000);
-		sendTime();
 	}
 }

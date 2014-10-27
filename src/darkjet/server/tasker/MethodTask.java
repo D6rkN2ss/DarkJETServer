@@ -13,12 +13,12 @@ public final class MethodTask extends Task {
 	public MethodTask(int tick, int delay, Object o, String name) throws Exception {
 		super(tick, delay);
 		this.owner = o;
-		this.callback = o.getClass().getMethod(name, new Class<?>[]{});
+		this.callback = o.getClass().getMethod(name, new Class<?>[]{Long.class});
 	}
 	@Override
-	public final void onRun() {
+	public final void onRun(long currentTick) {
 		try {
-			callback.invoke(owner, new Object[]{} );
+			callback.invoke(owner, new Object[]{currentTick} );
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

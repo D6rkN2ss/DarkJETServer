@@ -62,6 +62,7 @@ public final class TaskManager extends BaseManager {
 	}
 	
 	public final class Worker extends Thread {
+		public long currentTick;
 		public int ctick;
 		public static final int DEFAULT_SLEEP = 1000 / DEFAULT_TICK;
 		
@@ -77,7 +78,7 @@ public final class TaskManager extends BaseManager {
 								task.delay--;
 								continue;
 							}
-							task.onRun();
+							task.onRun(currentTick);
 							if( task.tick != -1) { task.tick++; }
 							if( task.tick == task.etick ) {
 								Tasks.remove(i);
@@ -101,6 +102,7 @@ public final class TaskManager extends BaseManager {
 							}
 						}
 					}
+					currentTick++;
 					final int sleep = (int) ( DEFAULT_SLEEP - (int) (System.currentTimeMillis() - ST) );
 					if( sleep > 0 ) {
 						sleep(sleep);

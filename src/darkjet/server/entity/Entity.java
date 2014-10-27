@@ -41,7 +41,7 @@ public abstract class Entity {
 		}
 	}
 	
-	public void update() throws Exception {
+	public void update(long currentTick) throws Exception {
 		if(x != lastX || y != lastY || z != lastZ || yaw != lastYaw || pitch != lastPitch || bodyYaw != lastBodyYaw) {
 			updateMovement();
 			lastX = x; lastY = y; lastZ = z; lastYaw = yaw; pitch = lastPitch; lastBodyYaw = bodyYaw;
