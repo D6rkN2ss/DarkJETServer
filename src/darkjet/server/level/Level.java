@@ -28,7 +28,7 @@ public final class Level {
 	public final String Name;
 	protected ChunkProvider provider;
 	
-	public short worldTime = 0;
+	public double worldTime = 0;
 	private final Object worldTimeLocker = new Object();
 	
 	public HashMap<Vector2, ChunkContainer> ChunkCaches = new HashMap<>();
@@ -57,9 +57,9 @@ public final class Level {
 			File Time = new File( levelDir, "time" );
 			
 			String ProviderName = new String( Utils.FiletoByteArray( Provider ) );
-			ByteBuffer bb = ByteBuffer.allocate(2);
+			ByteBuffer bb = ByteBuffer.allocate(8);
 			bb.put( Utils.FiletoByteArray(Time) ); bb.position(0);
-			worldTime = bb.getShort();
+			worldTime = bb.getDouble();
 			
 			@SuppressWarnings("unchecked") //Verify Action?
 			Class<ChunkProvider> provider = (Class<ChunkProvider>) leader.level.Providers.get(ProviderName);
@@ -86,7 +86,7 @@ public final class Level {
 			File Time = new File( levelDir, "time" );
 			
 			Utils.WriteByteArraytoFile( provider.getName().getBytes() , Provider);
-			Utils.WriteByteArraytoFile( ByteBuffer.allocate(2).putShort(worldTime).array() , Time);
+			Utils.WriteByteArraytoFile( ByteBuffer.allocate(8).putDouble(worldTime).array() , Time);
 			
 			for( ChunkContainer cc : ChunkCaches.values() ) {
 				provider.saveChunk(cc.chunk);
@@ -199,13 +199,13 @@ public final class Level {
 	
 	public final void sendTime() throws Exception {
 		synchronized (worldTimeLocker) {
-			leader.player.broadcastPacket(new SetTimePacket( worldTime ), false);
+			leader.player.broadcastPacket(new SetTimePacket( (int) worldTime ), false);
 		}
 	}
 	
 	public final void sendTime(Player p) throws Exception {
 		synchronized (worldTimeLocker) {
-			p.Queue.addMinecraftPacket( new SetTimePacket( worldTime ) );
+			p.Queue.addMinecraftPacket( new SetTimePacket( (int) worldTime ) );
 		}
 	}
 	
@@ -215,7 +215,7 @@ public final class Level {
 	
 	public final void setTime(short time) throws Exception {
 		worldTime = time;
-		worldTime = (short) (worldTime % 24000);
+		worldTime = (worldTime % 24000);
 		sendTime();
 	}
 }
