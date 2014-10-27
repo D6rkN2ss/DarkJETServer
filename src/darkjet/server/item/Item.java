@@ -49,7 +49,10 @@ public class Item {
 	 * @return Worked?
 	 */
 	public boolean use(Vector vector, Player player, Level level) throws Exception {
-		Logger.print(Logger.DEBUG, "Trigger!", id);
+		return use(vector, player, level, id, meta, face);
+	}
+	
+	public final static boolean use(Vector vector, Player player, Level level, int id, short meta, int face) throws Exception {
 		Vector Target = vector.getSide((byte) face, 1);
 		byte TB = level.getBlock(Target);
 		if( TB == 0x00 ) {
