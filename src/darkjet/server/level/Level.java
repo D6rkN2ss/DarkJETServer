@@ -167,7 +167,7 @@ public final class Level {
 		return leader.level.getLevelPath(Name);
 	}
 	
-	public final void setBlock(Vector v, byte id, byte meta) {
+	public final void setBlock(Vector v, byte id, byte meta) throws Exception {
 		setBlock(v.getX(), v.getY(), v.getZ(), id, meta);
 	}
 	public final void setBlock(int x, int y, int z, byte id, byte meta) throws Exception {

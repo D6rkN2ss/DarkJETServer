@@ -1,11 +1,8 @@
 package darkjet.server.item;
 
 import java.util.HashMap;
-
-import darkjet.server.Logger;
 import darkjet.server.level.Level;
 import darkjet.server.math.Vector;
-import darkjet.server.network.packets.minecraft.UpdateBlockPacket;
 import darkjet.server.network.player.Player;
 
 /**
@@ -16,6 +13,7 @@ public class Item {
 	public final static HashMap<Integer, Class<?>> CustomItems = new HashMap<>();
 	static {
 		CustomItems.put(50, Torch.class);
+		CustomItems.put(259, FlintNSteel.class);
 	}
 	public final static Item getItem(int id, short meta, int face) throws Exception {
 		if( CustomItems.containsKey(id) ) {
