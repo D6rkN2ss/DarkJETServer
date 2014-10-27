@@ -13,7 +13,7 @@ public final class MethodTask extends Task {
 	public MethodTask(int tick, int delay, Object o, String name) throws Exception {
 		super(tick, delay);
 		this.owner = o;
-		this.callback = o.getClass().getMethod(name, new Class<?>[]{Long.class});
+		this.callback = o.getClass().getMethod(name, new Class<?>[]{long.class});
 	}
 	@Override
 	public final void onRun(long currentTick) {
