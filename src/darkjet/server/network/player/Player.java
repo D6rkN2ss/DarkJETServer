@@ -310,10 +310,10 @@ public final class Player extends Entity {
 				}
 				Logger.print(Logger.DEBUG, "%d, %d, %d, %d", uip.item, uip.x, uip.y, uip.z);
 				uip.eid = getEID();
-				Item item = Item.getItem(uip.item, uip.meta, uip.face);
+				Item item = Item.getItem(uip.item);
 				Vector v = new Vector(uip.x, uip.y, uip.z);
 				if(item.checkValid(v)) {
-					item.use(v, this, level);
+					item.use(v, this, level, uip.meta, uip.face);
 				}
 				break;
 			case MinecraftIDs.PLAYER_EQUIPMENT:

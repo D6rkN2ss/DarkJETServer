@@ -17,8 +17,8 @@ public final class Torch extends Item {
 		MetaMap.put(Vector.SIDE_UP, (byte) 5);
 	}
 	
-	public Torch(int id, short meta, int face) {
-		super(id, meta, face);
+	public Torch(int id) {
+		super(id);
 		
 		if( id != 50 ) {
 			Logger.print(Logger.WARNING, "Not Match ID for Torch: %d != 50", id);
@@ -26,7 +26,7 @@ public final class Torch extends Item {
 	}
 
 	@Override
-	public boolean use(Vector vector, Player player, Level level)
+	public boolean use(Vector vector, Player player, Level level, short meta, int face)
 			throws Exception {
 		meta = 0;
 		byte id = level.getBlock(vector);
@@ -40,7 +40,7 @@ public final class Torch extends Item {
 				meta = (short) MetaMap.get( (byte) face );
 			}
 		}
-		return super.use(vector, player, level);
+		return super.use(vector, player, level, meta, face);
 	}
 	
 	

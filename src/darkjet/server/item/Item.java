@@ -15,21 +15,17 @@ public class Item {
 		CustomItems.put(50, Torch.class);
 		CustomItems.put(259, FlintNSteel.class);
 	}
-	public final static Item getItem(int id, short meta, int face) throws Exception {
+	public final static Item getItem(int id) throws Exception {
 		if( CustomItems.containsKey(id) ) {
-			return (Item) CustomItems.get(id).getDeclaredConstructor(int.class, short.class, int.class).newInstance(id, meta, face);
+			return (Item) CustomItems.get(id).getDeclaredConstructor(int.class).newInstance(id);
 		} else {
-			return new Item(id, meta, face);
+			return new Item(id);
 		}
 	}
-	
 	protected int id;
-	protected int face;
-	protected short meta;
-	public Item(int id, short meta, int face) {
+	
+	public Item(int id) {
 		this.id = id;
-		this.meta = meta;
-		this.face = face;
 	}
 	
 	public final boolean checkValid(Vector vector) {
@@ -39,14 +35,7 @@ public class Item {
 		return true;
 	}
 	
-	/**
-	 * Use Item into Given Level/Position
-	 * @param Vector vector
-	 * @param Player player
-	 * @param level Level
-	 * @return Worked?
-	 */
-	public boolean use(Vector vector, Player player, Level level) throws Exception {
+	public boolean use(Vector vector, Player player, Level level, short meta, int face) throws Exception {
 		return use(vector, player, level, id, meta, face);
 	}
 	
