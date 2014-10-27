@@ -18,7 +18,7 @@ public class Item {
 	}
 	public final static Item getItem(int id, short meta, int face) throws Exception {
 		if( CustomItems.containsKey(id) ) {
-			return (Item) CustomItems.get(id).getDeclaredConstructor(Integer.class, Short.class, Integer.class).newInstance(id, meta, face);
+			return (Item) CustomItems.get(id).getDeclaredConstructor(int.class, short.class, int.class).newInstance(id, meta, face);
 		} else {
 			return new Item(id, meta, face);
 		}
