@@ -11,7 +11,7 @@ public final class Loader {
 	public final static void main(String[] args) {
 		Leader leader = new Leader();
 		BufferedReader scanInput = new BufferedReader( new InputStreamReader(System.in) );
-		while ( leader.exit ) {
+		while ( !leader.exit ) {
 			try {
 				String input = scanInput.readLine();
 				leader.command.handleCommand(input);
