@@ -2,7 +2,7 @@ package darkjet.server.item;
 
 import java.util.HashMap;
 
-import darkjet.server.block.Torch;
+import darkjet.server.block.Block;
 import darkjet.server.level.Level;
 import darkjet.server.math.Vector;
 import darkjet.server.network.player.Player;
@@ -14,14 +14,18 @@ import darkjet.server.network.player.Player;
 public class Item {
 	public final static HashMap<Integer, Class<?>> CustomItems = new HashMap<>();
 	static {
-		CustomItems.put(50, Torch.class);
 		CustomItems.put(259, FlintNSteel.class);
 	}
 	public final static Item getItem(int id) throws Exception {
 		if( CustomItems.containsKey(id) ) {
 			return (Item) CustomItems.get(id).getDeclaredConstructor(int.class).newInstance(id);
 		} else {
-			return new Item(id);
+			Item result = (Item) Block.getBlock( id );
+			if(result == null) {
+				return new Item(id);
+			} else {
+				return result;
+			}
 		}
 	}
 	protected int id;
