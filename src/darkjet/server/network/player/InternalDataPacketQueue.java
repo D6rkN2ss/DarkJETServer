@@ -23,6 +23,7 @@ public final class InternalDataPacketQueue {
 	private int sequenceNumber = 0;
 	private int messageIndex = 0;
 	private final int mtu;
+	private int lastSequenceNum = 0;
 	
 	protected final ArrayList<Integer> ACKQueue; // Received packet queue
 	protected final ArrayList<Integer> NACKQueue; // Not received packet queue
@@ -70,11 +71,11 @@ public final class InternalDataPacketQueue {
 	}
 	
 	public final void handlePacket(MinecraftDataPacket MDP) throws Exception {
-		if(MDP.sequenceNumber - owner.lastSequenceNum == 1){
-			owner.lastSequenceNum = MDP.sequenceNumber;
+		if(MDP.sequenceNumber - lastSequenceNum == 1){
+			lastSequenceNum = MDP.sequenceNumber;
 		}
 		else{
-			for(int i = owner.lastSequenceNum; i < MDP.sequenceNumber; ++i){
+			for(int i = lastSequenceNum; i < MDP.sequenceNumber; ++i){
 				addVerify(i, true);
 			}
 		}

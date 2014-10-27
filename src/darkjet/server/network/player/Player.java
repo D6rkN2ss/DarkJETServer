@@ -54,8 +54,6 @@ public final class Player extends Entity {
 	
 	public String name;
 	
-	int lastSequenceNum = 0;
-	
 	public final InternalDataPacketQueue Queue;
 	
 	private long lastPacketReceived = System.currentTimeMillis();
