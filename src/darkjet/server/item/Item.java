@@ -53,9 +53,7 @@ public class Item {
 		Vector Target = vector.getSide((byte) face, 1);
 		byte TB = level.getBlock(Target);
 		if( TB == 0x00 ) {
-			UpdateBlockPacket uubp = new UpdateBlockPacket(Target.getX(), (byte) Target.getY(), Target.getZ(), (byte) id, (byte) meta);
 			level.setBlock(Target, (byte) id, (byte) meta);
-			player.leader.player.broadcastPacket(uubp, false);
 			return true;
 		}
 		return false;

@@ -170,7 +170,7 @@ public final class Level {
 	public final void setBlock(Vector v, byte id, byte meta) {
 		setBlock(v.getX(), v.getY(), v.getZ(), id, meta);
 	}
-	public final void setBlock(int x, int y, int z, byte id, byte meta) {
+	public final void setBlock(int x, int y, int z, byte id, byte meta) throws Exception {
 		synchronized (this) {
 			Vector2 cv = new Vector2( x >>4, z >> 4 );
 			Chunk chunk = ChunkCaches.get( cv ).chunk;
@@ -184,6 +184,9 @@ public final class Level {
 			int cz = Math.abs(z) % 16;
 			//cx = Math.abs(cx); cz = Math.abs(cz);
 			chunk.setBlock(cx, (byte) y, cz, id, meta);
+			
+			UpdateBlockPacket uubp = new UpdateBlockPacket(x, (byte) y, z, (byte) id, (byte) meta);
+			leader.player.broadcastPacket(uubp, false);
 		}
 	}
 
