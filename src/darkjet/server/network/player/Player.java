@@ -50,7 +50,7 @@ public final class Player extends Entity {
 	public final short mtu;
 	public final long clientID;
 	
-	public boolean isLogin = false;
+	private boolean isLogin = false;
 	
 	public String name;
 	

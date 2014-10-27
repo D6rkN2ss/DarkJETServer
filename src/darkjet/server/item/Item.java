@@ -11,8 +11,11 @@ import darkjet.server.network.player.Player;
  * Item Handler
  * @author Blue Electric
  */
-public final class Item {
+public class Item {
 	public final static HashMap<Integer, Class<?>> CustomItems = new HashMap<>();
+	static {
+		CustomItems.put(50, Torch.class);
+	}
 	public final static Item getItem(int id, short meta, int face) throws Exception {
 		if( CustomItems.containsKey(id) ) {
 			return (Item) CustomItems.get(id).getDeclaredConstructor(Integer.class, Short.class, Integer.class).newInstance(id, meta, face);
