@@ -1,6 +1,8 @@
 package darkjet.server.item;
 
 import java.util.HashMap;
+
+import darkjet.server.block.Torch;
 import darkjet.server.level.Level;
 import darkjet.server.math.Vector;
 import darkjet.server.network.player.Player;

@@ -1,13 +1,12 @@
-package darkjet.server.item;
+package darkjet.server.block;
 
 import java.util.HashMap;
-
 import darkjet.server.Logger;
 import darkjet.server.level.Level;
 import darkjet.server.math.Vector;
 import darkjet.server.network.player.Player;
 
-public final class Torch extends Item {
+public final class Torch extends Block {
 	public final static HashMap<Byte, Byte> MetaMap = new HashMap<>();
 	static {
 		MetaMap.put(Vector.SIDE_EAST, (byte) 1);
