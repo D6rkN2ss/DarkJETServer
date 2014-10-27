@@ -305,9 +305,16 @@ public final class Player extends Entity {
 			case MinecraftIDs.USE_ITEM:
 				UseItemPacket uip = new UseItemPacket();
 				uip.parse( ipck.buffer );
+				if( !(uip.face >= 0 && uip.face <= 5) ) {
+					break;
+				}
+				Logger.print(Logger.DEBUG, "%d, %d, %d, %d", uip.item, uip.x, uip.y, uip.z);
 				uip.eid = getEID();
 				Item item = Item.getItem(uip.item, uip.meta, uip.face);
-				item.use(new Vector(uip.x, uip.y, uip.z), this, level);
+				Vector v = new Vector(uip.x, uip.y, uip.z);
+				if(item.checkValid(v)) {
+					item.use(v, this, level);
+				}
 				break;
 			case MinecraftIDs.PLAYER_EQUIPMENT:
 				PlayerEquipmentPacket pep = new PlayerEquipmentPacket();

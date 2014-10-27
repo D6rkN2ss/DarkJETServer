@@ -2,6 +2,7 @@ package darkjet.server.item;
 
 import java.util.HashMap;
 
+import darkjet.server.Logger;
 import darkjet.server.level.Level;
 import darkjet.server.math.Vector;
 import darkjet.server.network.packets.minecraft.UpdateBlockPacket;
@@ -24,12 +25,20 @@ public class Item {
 		}
 	}
 	
-	private final int id, face;
-	private final short meta;
+	protected int id;
+	protected int face;
+	protected short meta;
 	public Item(int id, short meta, int face) {
 		this.id = id;
 		this.meta = meta;
 		this.face = face;
+	}
+	
+	public final boolean checkValid(Vector vector) {
+		if(vector.getY() < 0 || vector.getY() > 127) {
+			return false;
+		}
+		return true;
 	}
 	
 	/**
@@ -40,9 +49,7 @@ public class Item {
 	 * @return Worked?
 	 */
 	public boolean use(Vector vector, Player player, Level level) throws Exception {
-		if( !(face >= 0 && face <= 5) ) {
-			return false;
-		}
+		Logger.print(Logger.DEBUG, "Trigger!", id);
 		Vector Target = vector.getSide((byte) face, 1);
 		byte TB = level.getBlock(Target);
 		if( TB == 0x00 ) {

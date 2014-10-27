@@ -190,6 +190,7 @@ public final class Level {
 	public final byte getBlock(Vector v) {
 		return getBlock(v.getX(), v.getY(), v.getZ());
 	}
+	
 	public final byte getBlock(int x, int y, int z) {
 		synchronized (this) {
 			Chunk chunk = ChunkCaches.get( new Vector2( x >>4, z >> 4 ) ).chunk;
