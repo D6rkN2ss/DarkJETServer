@@ -6,7 +6,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.HashMap;
-
 import darkjet.server.Leader;
 import darkjet.server.Logger;
 import darkjet.server.entity.Entity;
@@ -33,7 +32,6 @@ import darkjet.server.network.packets.minecraft.RemovePlayerPacket;
 import darkjet.server.network.packets.minecraft.ServerHandshakePacket;
 import darkjet.server.network.packets.minecraft.SetHealthPacket;
 import darkjet.server.network.packets.minecraft.SetSpawnPositionPacket;
-import darkjet.server.network.packets.minecraft.SetTimePacket;
 import darkjet.server.network.packets.minecraft.StartGamePacket;
 import darkjet.server.network.packets.minecraft.UpdateBlockPacket;
 import darkjet.server.network.packets.minecraft.UseItemPacket;
@@ -74,7 +72,7 @@ public final class Player extends Entity {
 	}
 	
 	public Player(Leader leader, String IP, int port, short mtu, long clientID) throws Exception {
-		super( leader, leader.entity.getNewEntityID() );
+		super( leader );
 		this.IP = IP;
 		this.port = port;
 		this.mtu = mtu;
@@ -85,6 +83,7 @@ public final class Player extends Entity {
 		Queue = new InternalDataPacketQueue(this, 3939);
 		
 		level = leader.level.getLoadedLevel("world");
+		Init(level, level.entites.getNewEntityID());
 		chunkSender = new ChunkSender(this);
 		
 		worker = new Worker();

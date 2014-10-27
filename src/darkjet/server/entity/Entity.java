@@ -1,6 +1,7 @@
 package darkjet.server.entity;
 
 import darkjet.server.Leader;
+import darkjet.server.level.Level;
 import darkjet.server.tasker.MethodTask;
 
 /**
@@ -15,10 +16,8 @@ public abstract class Entity {
 	
 	private MethodTask mt;
 	
-	public Entity(Leader leader, int EID) {
+	public Entity(Leader leader) {
 		this.leader = leader;
-		this.EID = EID;
-		leader.entity.addEntity( this );
 		
 		if( isNeedUpdate() ) {
 			try {
@@ -29,6 +28,11 @@ public abstract class Entity {
 				throw new RuntimeException();
 			}
 		}
+	}
+	
+	public void Init(Level level, int EID) {
+		this.EID = EID;
+		level.entites.addEntity(this);
 	}
 	
 	public void close() throws Exception {

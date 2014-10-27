@@ -1,6 +1,7 @@
 package darkjet.server.level;
 
 import darkjet.server.Leader;
+import darkjet.server.entity.EntityManager;
 import darkjet.server.level.chunk.Chunk;
 import darkjet.server.level.chunk.ChunkGenerator;
 import darkjet.server.level.chunk.ChunkProvider;
@@ -10,12 +11,9 @@ import darkjet.server.network.packets.minecraft.SetTimePacket;
 import darkjet.server.network.player.Player;
 import darkjet.server.tasker.MethodTask;
 import darkjet.server.utility.Utils;
-
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-
-import com.sun.xml.internal.fastinfoset.algorithm.BuiltInEncodingAlgorithm.WordListener;
 
 /**
  * Chunk (Caching) Manager
@@ -23,6 +21,7 @@ import com.sun.xml.internal.fastinfoset.algorithm.BuiltInEncodingAlgorithm.WordL
  */
 public final class Level {
 	private final Leader leader;
+	public final EntityManager entites;
 	
 	public final String Name;
 	protected ChunkProvider provider;
@@ -35,6 +34,7 @@ public final class Level {
 	public Level(Leader leader, String Name) {
 		this.leader = leader;
 		this.Name = Name;
+		this.entites = new EntityManager(leader);
 		
 		try {
 			leader.task.addTask( new MethodTask(-1, 10, this, "updateTime") );
