@@ -1,6 +1,7 @@
 package darkjet.server.level;
 
 import darkjet.server.Leader;
+import darkjet.server.Logger;
 import darkjet.server.entity.EntityManager;
 import darkjet.server.level.chunk.Chunk;
 import darkjet.server.level.chunk.ChunkGenerator;
@@ -17,6 +18,8 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 
+import com.sun.xml.internal.fastinfoset.algorithm.BuiltInEncodingAlgorithm.WordListener;
+
 /**
  * Chunk (Caching) Manager
  * @author Blue Electric
@@ -30,7 +33,7 @@ public final class Level {
 	public final String Name;
 	protected ChunkProvider provider;
 	
-	public double worldTime = 0;
+	public int worldTime = 0;
 	private final Object worldTimeLocker = new Object();
 	
 	public HashMap<Vector2, ChunkContainer> ChunkCaches = new HashMap<>();
@@ -61,7 +64,7 @@ public final class Level {
 			String ProviderName = new String( Utils.FiletoByteArray( Provider ) );
 			ByteBuffer bb = ByteBuffer.allocate(8);
 			bb.put( Utils.FiletoByteArray(Time) ); bb.position(0);
-			worldTime = bb.getDouble();
+			worldTime = bb.getInt();
 			
 			@SuppressWarnings("unchecked") //Verify Action?
 			Class<ChunkProvider> provider = (Class<ChunkProvider>) leader.level.Providers.get(ProviderName);
@@ -88,7 +91,7 @@ public final class Level {
 			File Time = new File( levelDir, "time" );
 			
 			Utils.WriteByteArraytoFile( provider.getName().getBytes() , Provider);
-			Utils.WriteByteArraytoFile( ByteBuffer.allocate(8).putDouble(worldTime).array() , Time);
+			Utils.WriteByteArraytoFile( ByteBuffer.allocate(4).putInt(worldTime).array() , Time);
 			
 			for( ChunkContainer cc : ChunkCaches.values() ) {
 				provider.saveChunk(cc.chunk);
@@ -212,13 +215,14 @@ public final class Level {
 	}
 	
 	public final void updateTime(long currentTick) throws Exception {
-		setTime((short) (worldTime+2.5));
-		if( currentTick % 200 == 0 ) {
+		setTime( (worldTime+4));
+		if( (currentTick % 200) == 0) {
+			Logger.print(Logger.DEBUG, "Send Time");
 			sendTime();
 		}
 	}
 	
-	public final void setTime(short time) throws Exception {
+	public final void setTime(int time) throws Exception {
 		worldTime = time;
 		worldTime = (worldTime % 24000);
 	}
