@@ -20,6 +20,8 @@ import java.util.HashMap;
  * @author Blue Electric
  */
 public final class Level {
+	public final static int TIME_FULL = 24000;
+	
 	private final Leader leader;
 	public final EntityManager entites;
 	
@@ -37,7 +39,7 @@ public final class Level {
 		this.entites = new EntityManager(leader);
 		
 		try {
-			leader.task.addTask( new MethodTask(-1, 10, this, "updateTime") );
+			leader.task.addTask( new MethodTask(-1, 1, this, "updateTime") );
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -205,11 +207,10 @@ public final class Level {
 		synchronized (worldTimeLocker) {
 			p.Queue.addMinecraftPacket( new SetTimePacket( worldTime ) );
 		}
-		
 	}
 	
 	public final void updateTime() throws Exception {
-		setTime((short) (worldTime+10));
+		setTime((short) (worldTime+2.5));
 	}
 	
 	public final void setTime(short time) throws Exception {
