@@ -217,7 +217,6 @@ public final class Level {
 	public final void updateTime(long currentTick) throws Exception {
 		setTime( (worldTime+4));
 		if( (currentTick % 200) == 0) {
-			Logger.print(Logger.DEBUG, "Send Time");
 			sendTime();
 		}
 	}
