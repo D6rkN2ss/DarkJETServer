@@ -1,7 +1,6 @@
 package darkjet.server.level;
 
 import darkjet.server.Leader;
-import darkjet.server.Logger;
 import darkjet.server.entity.EntityManager;
 import darkjet.server.level.chunk.Chunk;
 import darkjet.server.level.chunk.ChunkGenerator;
@@ -18,8 +17,6 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 
-import com.sun.xml.internal.fastinfoset.algorithm.BuiltInEncodingAlgorithm.WordListener;
-
 /**
  * Chunk (Caching) Manager
  * @author Blue Electric
@@ -32,6 +29,7 @@ public final class Level {
 	
 	public final String Name;
 	protected ChunkProvider provider;
+	protected final BlockManager blocks;
 	
 	public int worldTime = 0;
 	private final Object worldTimeLocker = new Object();
@@ -42,6 +40,8 @@ public final class Level {
 		this.leader = leader;
 		this.Name = Name;
 		this.entites = new EntityManager(leader);
+		this.blocks = new BlockManager(this);
+		entites.Init();
 		
 		try {
 			leader.task.addTask( new MethodTask(-1, 1, this, "updateTime") );
@@ -80,6 +80,7 @@ public final class Level {
 	public final void onClose() {
 		synchronized (this) {
 			provider.onClose(); save();
+			entites.onClose();
 		}
 	}
 	
@@ -184,7 +185,7 @@ public final class Level {
 			int cz = Math.abs(z) % 16;
 			//cx = Math.abs(cx); cz = Math.abs(cz);
 			chunk.setBlock(cx, (byte) y, cz, id, meta);
-			
+			blocks.onChange(x, y, z, id, meta);
 			UpdateBlockPacket uubp = new UpdateBlockPacket(x, (byte) y, z, (byte) id, (byte) meta);
 			leader.player.broadcastPacket(uubp, false);
 		}
