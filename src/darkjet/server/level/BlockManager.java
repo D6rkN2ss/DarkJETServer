@@ -18,7 +18,8 @@ public final class BlockManager {
 	}
 	
 	public final void onChange(int x, int y, int z, byte id, byte meta) throws Exception {
-		Block b = Block.getBlock(id);
+		Block b = Block.getBlock( level.getBlock(x, y, z) );
+		if(b == null) { b = new Block(id); }
 		b.getUpdateRange(updateList, x, y, z);
 	}
 
