@@ -36,6 +36,10 @@ public class Vector {
 		return z;
 	}
 
+	@Override
+	public int hashCode() {
+		return (x + ":" + y + ":" + z).hashCode();
+	}
 	public void setX(int v){
 		this.x = v;
 	}

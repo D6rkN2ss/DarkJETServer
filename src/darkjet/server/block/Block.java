@@ -1,6 +1,9 @@
 package darkjet.server.block;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import darkjet.server.item.Item;
 import darkjet.server.level.Level;
@@ -12,6 +15,7 @@ public class Block extends Item {
 	static {
 		CustomBlocks.put(50, Torch.class);
 		
+		//Stairs
 		CustomBlocks.put(53, Stair.class); //WODDEN_STAIR
 		CustomBlocks.put(67, Stair.class); //COBBLE_STAIR
 		CustomBlocks.put(108, Stair.class); //BRICK_STAIR
@@ -25,6 +29,9 @@ public class Block extends Item {
 		CustomBlocks.put(156, Stair.class); //QUARTZ_STAIRS
 		CustomBlocks.put(163, Stair.class); //ACACIA_WOOD_STAIRS
 		CustomBlocks.put(164, Stair.class); //DARK_OAK_WOOD_STAIRS
+		
+		//Rails
+		CustomBlocks.put(66, Rail.class);
 	}
 	public final static Block getBlock(int id) throws Exception {
 		if( CustomBlocks.containsKey(id) ) {
@@ -32,6 +39,16 @@ public class Block extends Item {
 		} else {
 			return null;
 		}
+	}
+	
+	public void getUpdateRange(List<Vector> updateList, int x, int y, int z) {
+		Vector v = new Vector(x, y, z);
+		updateList.add(v.getSide(Vector.SIDE_UP, 1));
+		updateList.add(v.getSide(Vector.SIDE_DOWN, 1));
+		updateList.add(v.getSide(Vector.SIDE_EAST, 1));
+		updateList.add(v.getSide(Vector.SIDE_WEST, 1));
+		updateList.add(v.getSide(Vector.SIDE_NORTH, 1));
+		updateList.add(v.getSide(Vector.SIDE_SOUTH, 1));
 	}
 	
 	@Override
