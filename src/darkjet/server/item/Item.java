@@ -22,7 +22,7 @@ public class Item {
 		} else {
 			Item result = (Item) Block.getBlock( id );
 			if(result == null) {
-				if( id > 128 ) {
+				if( id > 256 ) {
 					return new Item(id);
 				} else {
 					return new Block(id);

@@ -29,7 +29,6 @@ public final class Torch extends Block {
 			throws Exception {
 		meta = 0;
 		byte id = level.getBlock(vector);
-		Logger.print(Logger.DEBUG, "getBlock: %d", id);
 		if( id == (byte) 50 ) {
 			if(face == Vector.SIDE_DOWN || face == Vector.SIDE_UP) {
 				return false;
