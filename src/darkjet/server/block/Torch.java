@@ -39,7 +39,7 @@ public final class Torch extends Block {
 				meta = (short) MetaMap.get( (byte) face );
 			}
 		}
-		return super.place(vector, player, level, id, meta, face);
+		return super.place(vector, player, level, this.id, meta, face);
 	}
 	
 	
