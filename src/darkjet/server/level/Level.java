@@ -207,6 +207,21 @@ public final class Level {
 		}
 	}
 	
+	public final byte getBlockMeta(Vector v) {
+		return getBlockMeta(v.getX(), v.getY(), v.getZ());
+	}
+	public final byte getBlockMeta(int x, int y, int z) {
+		synchronized (this) {
+			Chunk chunk = ChunkCaches.get( new Vector2( x >>4, z >> 4 ) ).chunk;
+			while( !chunk.isReady() ) {
+				
+			}
+			int cx = x % 16;
+			int cz = z % 16;
+			return chunk.getBlockMeta(cx, y, cz);
+		}
+	}
+	
 	public final void sendTime() throws Exception {
 		synchronized (worldTimeLocker) {
 			leader.player.broadcastPacket(new SetTimePacket( (int) worldTime ), false);
