@@ -2,8 +2,6 @@ package darkjet.server.network.packets.minecraft;
 
 import java.nio.ByteBuffer;
 
-import darkjet.server.level.Level;
-
 public final class SetTimePacket extends BaseMinecraftPacket {
 	@Override
 	public int getPID() {

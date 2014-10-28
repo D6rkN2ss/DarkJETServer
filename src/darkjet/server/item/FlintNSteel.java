@@ -12,7 +12,7 @@ public final class FlintNSteel extends Item {
 	@Override
 	public boolean use(Vector vector, Player player, Level level, short meta, int face)
 			throws Exception {
-		return super.use(vector, player, level, 51, (short) 0, face);
+		return super.place(vector, player, level, 51, (short) 0, face);
 	}
 
 }

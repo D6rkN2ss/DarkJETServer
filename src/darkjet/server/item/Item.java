@@ -42,10 +42,10 @@ public class Item {
 	}
 	
 	public boolean use(Vector vector, Player player, Level level, short meta, int face) throws Exception {
-		return use(vector, player, level, id, meta, face);
+		return false;
 	}
 	
-	public final static boolean use(Vector vector, Player player, Level level, int id, short meta, int face) throws Exception {
+	public final static boolean place(Vector vector, Player player, Level level, int id, short meta, int face) throws Exception {
 		Vector Target = vector.getSide((byte) face, 1);
 		byte TB = level.getBlock(Target);
 		if( TB == 0x00 ) {
