@@ -101,6 +101,25 @@ public class Vector {
 		}
 	}
 	
+	public final static byte invertSide(byte side) {
+		switch( side ){
+		case SIDE_DOWN:
+			return SIDE_UP;
+		case SIDE_UP:
+			return SIDE_DOWN;
+		case SIDE_NORTH:
+			return SIDE_SOUTH;
+        case SIDE_SOUTH:
+            return SIDE_NORTH;
+        case SIDE_WEST:
+            return SIDE_EAST;
+        case SIDE_EAST:
+            return SIDE_WEST;
+        default:
+            return side;
+	}
+	}
+	
 	public static Vector merge(Vector... vectors){
 		int x = 0;
 		int y = 0;

@@ -1,10 +1,7 @@
 package darkjet.server.block;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
 import darkjet.server.item.Item;
 import darkjet.server.level.Level;
 import darkjet.server.math.Vector;
@@ -33,6 +30,8 @@ public class Block extends Item {
 		//Rails
 		CustomBlocks.put(66, Rail.class);
 	}
+	
+	
 	public final static Block getBlock(int id) throws Exception {
 		if( CustomBlocks.containsKey(id) ) {
 			return (Block) CustomBlocks.get( id ).getDeclaredConstructor(int.class).newInstance(id);
