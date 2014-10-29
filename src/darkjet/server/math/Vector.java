@@ -36,6 +36,10 @@ public class Vector {
 		return z;
 	}
 
+	@Override
+	public int hashCode() {
+		return (x + ":" + y + ":" + z).hashCode();
+	}
 	public void setX(int v){
 		this.x = v;
 	}
@@ -95,6 +99,25 @@ public class Vector {
 	        default:
 	            return this;
 		}
+	}
+	
+	public final static byte invertSide(byte side) {
+		switch( side ){
+		case SIDE_DOWN:
+			return SIDE_UP;
+		case SIDE_UP:
+			return SIDE_DOWN;
+		case SIDE_NORTH:
+			return SIDE_SOUTH;
+        case SIDE_SOUTH:
+            return SIDE_NORTH;
+        case SIDE_WEST:
+            return SIDE_EAST;
+        case SIDE_EAST:
+            return SIDE_WEST;
+        default:
+            return side;
+	}
 	}
 	
 	public static Vector merge(Vector... vectors){

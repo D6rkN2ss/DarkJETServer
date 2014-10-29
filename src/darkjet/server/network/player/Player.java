@@ -5,27 +5,20 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
-
 import darkjet.server.Leader;
 import darkjet.server.Logger;
 import darkjet.server.entity.Entity;
+import darkjet.server.item.Item;
 import darkjet.server.level.Level;
-import darkjet.server.level.chunk.Chunk;
 import darkjet.server.math.Vector;
 import darkjet.server.math.Vector2;
 import darkjet.server.network.packets.minecraft.AddPlayerPacket;
 import darkjet.server.network.packets.minecraft.AdventureSettingPacket;
 import darkjet.server.network.packets.minecraft.AnimatePacket;
-import darkjet.server.network.packets.minecraft.BaseMinecraftPacket;
 import darkjet.server.network.packets.minecraft.ClientConnectPacket;
 import darkjet.server.network.packets.minecraft.ClientHandshakePacket;
 import darkjet.server.network.packets.minecraft.DisconnectPacket;
-import darkjet.server.network.packets.minecraft.FullChunkDataPacket;
 import darkjet.server.network.packets.minecraft.LoginPacket;
 import darkjet.server.network.packets.minecraft.LoginStatusPacket;
 import darkjet.server.network.packets.minecraft.MessagePacket;
@@ -39,18 +32,13 @@ import darkjet.server.network.packets.minecraft.RemovePlayerPacket;
 import darkjet.server.network.packets.minecraft.ServerHandshakePacket;
 import darkjet.server.network.packets.minecraft.SetHealthPacket;
 import darkjet.server.network.packets.minecraft.SetSpawnPositionPacket;
-import darkjet.server.network.packets.minecraft.SetTimePacket;
 import darkjet.server.network.packets.minecraft.StartGamePacket;
 import darkjet.server.network.packets.minecraft.UpdateBlockPacket;
 import darkjet.server.network.packets.minecraft.UseItemPacket;
 import darkjet.server.network.packets.raknet.AcknowledgePacket;
-import darkjet.server.network.packets.raknet.AcknowledgePacket.ACKPacket;
-import darkjet.server.network.packets.raknet.AcknowledgePacket.NACKPacket;
-import darkjet.server.network.packets.raknet.MinecraftDataPacket;
-import darkjet.server.network.packets.raknet.RaknetIDs;
 import darkjet.server.network.packets.raknet.MinecraftDataPacket.InternalDataPacket;
-import darkjet.server.tasker.MethodTask;
-import darkjet.server.utility.Utils;
+import darkjet.server.network.player.ChunkSender.ChunkCache;
+import darkjet.server.tasker.TaskManager.TaskThread;
 
 /**
  * Minecraft Packet Handler
@@ -62,23 +50,17 @@ public final class Player extends Entity {
 	public final short mtu;
 	public final long clientID;
 	
-	public boolean isLogin = false;
+	private boolean isLogin = false;
 	
 	public String name;
 	
-	private int lastSequenceNum = 0;
-	
-	private ArrayList<Integer> ACKQueue; // Received packet queue
-	private ArrayList<Integer> NACKQueue; // Not received packet queue
-	private HashMap<Integer, byte[]> recoveryQueue;
-	private HashMap<Integer, InternalDataPacket> OftenrecoveryQueue;
-	
-	protected final InternalDataPacketQueue Queue;
+	public final InternalDataPacketQueue Queue;
 	
 	private long lastPacketReceived = System.currentTimeMillis();
 	
-	private final ChunkSender chunkSender;
-	public final HashMap<Vector2, Chunk> getUsingChunks() {
+	private final Worker worker;
+	protected final ChunkSender chunkSender;
+	public final HashMap<Vector2, ChunkCache> getUsingChunks() {
 		return chunkSender.useChunks;
 	}
 	
@@ -87,10 +69,8 @@ public final class Player extends Entity {
 		return level;
 	}
 	
-	private final MethodTask timeoutTask;
-	
 	public Player(Leader leader, String IP, int port, short mtu, long clientID) throws Exception {
-		super( leader, leader.entity.getNewEntityID() );
+		super( leader );
 		this.IP = IP;
 		this.port = port;
 		this.mtu = mtu;
@@ -98,18 +78,46 @@ public final class Player extends Entity {
 		
 		x = 128F; y = 4F; z = 128F;
 		
-		ACKQueue = new ArrayList<Integer>();
-		NACKQueue = new ArrayList<Integer>();
-		recoveryQueue = new HashMap<Integer, byte[]>();
-		OftenrecoveryQueue = new HashMap<Integer, InternalDataPacket>();
-		
-		Queue = new InternalDataPacketQueue(3939);
+		Queue = new InternalDataPacketQueue(this, 3939);
 		
 		level = leader.level.getLoadedLevel("world");
-		chunkSender = new ChunkSender();
+		Init(level, level.entites.getNewEntityID());
+		chunkSender = new ChunkSender(this);
 		
-		timeoutTask = new MethodTask(-1, 20, this, "checkTimeout");
-		leader.task.addTask(timeoutTask);
+		worker = new Worker();
+		leader.task.addThread(worker);
+	}
+	
+	public final class Worker extends TaskThread {
+		private long lastChunkSender = -1;
+		
+		public Worker() {
+			setName( "Player: " + IP);
+		}
+		
+		@Override
+		public final void launch() {
+			while ( !isInterrupted() ) {
+				try {
+					if( lastChunkSender + 100 < System.currentTimeMillis() ) {
+						if( name != null ) {
+							if( !chunkSender.updateChunk() ) {
+								lastChunkSender = System.currentTimeMillis();
+							}
+						}
+					}
+					if( name == null || isLogin ) {
+						Queue.update();
+					}
+					checkTimeout();
+					Thread.sleep(1);
+				} catch (InterruptedException ie) { 
+					break;
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}
 	}
 	
 	/*
@@ -139,9 +147,12 @@ public final class Player extends Entity {
 	}
 	
 	public final void checkTimeout() throws Exception {
-		if( lastPacketReceived + 30000 < System.currentTimeMillis() ) {
-			Logger.print(Logger.DEBUG, "lastSeq %s", lastSequenceNum);
-			close("Timeout");
+		if( lastPacketReceived + 5000 < System.currentTimeMillis() ) {
+			PingPacket ping = new PingPacket( System.currentTimeMillis() );
+			Queue.addMinecraftPacket(ping);
+			if( lastPacketReceived + 30000 < System.currentTimeMillis() ) {
+				close("Timeout");
+			}
 		}
 	}
 	
@@ -157,173 +168,28 @@ public final class Player extends Entity {
 	}
 
 	public final void close(String reason) throws Exception {
-		Logger.print(Logger.INFO, "%s(%s) was disconnected, %s", name, IP, reason);
-		leader.chat.broadcastChat(String.format("%s was disconnected, %s", name, reason), this);
+		leader.player.removePlayer(IP);
 		save();
-		leader.task.removeTask(timeoutTask);
+		worker.close();
 		DisconnectPacket dp = new DisconnectPacket();
 		Queue.addMinecraftPacket(dp); Queue.send();
-		while (chunkSender.isAlive()) {
-			chunkSender.interrupt();
-		}
-		if(isLogin) { leader.player.removeLoginPlayer(IP); }
-		else { leader.player.removeNonLoginPlayer(IP); }
+		chunkSender.destroy();
+		
 		RemovePlayerPacket rpp = new RemovePlayerPacket();
 		rpp.eid = EID; rpp.clientID = clientID;
-		leader.player.broadcastPacket(rpp, false, true, this);
+		leader.player.broadcastPacket(rpp, false, this);
+		Logger.print(Logger.INFO, "%s(%s) was disconnected, %s", name, IP, reason);
+		leader.chat.broadcastChat(String.format("%s was disconnected, %s", name, reason), this);
 		super.close();
-		
 	}
 	
 	//Internal Part
-	private final class ChunkSender extends Thread {
-		public final HashMap<Vector2, Chunk> useChunks = new HashMap<>();
-		
-		private final HashMap<Integer, ArrayList<Vector2>> MapOrder = new HashMap<>();
-		private final HashMap<Vector2, Boolean> requestChunks = new HashMap<>();
-		private final ArrayList<Integer> orders = new ArrayList<>();
-		
-		public boolean first = true, firstReloader = false;;
-		public int lastCX = 0, lastCZ = 0;
-		
-		public boolean refreshAllUsed = false;
-		
-		@Override
-		public final void run() {
-			while ( !isInterrupted() ) {
-				try {
-					updateChunk();
-					Thread.sleep(100);
-				} catch (InterruptedException ie) {
-					//It is Interrupted! Time to Out!
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-			for( Chunk chunk : useChunks.values() ) {
-				level.releaseChunk( chunk.x, chunk.z );
-			}
-		}
-		
-		private final void updateChunk() throws Exception {
-			int centerX = (int) Math.floor(x) >> 4;
-			int centerZ = (int) Math.floor(z) >> 4;
-			
-			if( refreshAllUsed ) {
-				for( Chunk chunk : useChunks.values() ) {
-					Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(chunk) ) );
-				}
-				refreshAllUsed = false;
-				return;
-			}
-			
-			if( centerX == lastCX && centerZ == lastCZ && !first ) {
-				Thread.sleep(100);
-				return;
-			}
-			lastCX = centerX; lastCZ = centerZ;
-			int radius = 4;
-			
-			MapOrder.clear(); requestChunks.clear(); orders.clear();
-			
-			for (int x = -radius; x <= radius; ++x) {
-				for (int z = -radius; z <= radius; ++z) {
-					int distance = (x*x) + (z*z);
-					int chunkX = x + centerX;
-					int chunkZ = z + centerZ;
-					if( !MapOrder.containsKey( distance ) ) {
-						MapOrder.put(distance, new ArrayList<Vector2>());
-					}
-					Vector2 v = new Vector2(chunkX, chunkZ);
-					requestChunks.put(v, true);
-					MapOrder.get(distance).add( v );
-					if( !useChunks.containsKey( v ) ) {
-						level.requestChunk( new Vector2(chunkX, chunkZ) );
-					}
-					orders.add(distance);
-				}
-			}
-			Collections.sort(orders);
-
-			//int sendCount = 0;
-			synchronized (Queue) {
-				for( Integer i : orders ) {
-					for( Vector2 v : MapOrder.get(i) ) {
-						try {
-							if( useChunks.containsKey(v) ) { continue; }
-							useChunks.put(v, level.getChunk(v.getX(), v.getZ()));
-							Queue.addMinecraftPacket( new FullChunkDataPacket( useChunks.get(v) ) );
-							sleep(1);
-							//sendCount++;
-							//Resend in First Chunk Sending
-							//TODO: Minecraft Error?
-							if( first ) {
-								useChunks.remove(v);
-							} else if ( firstReloader ) {
-								level.releaseChunk(v);
-							}
-						} catch (Exception e) {
-							e.printStackTrace();
-						}
-					}
-				}
-				Queue.send();
-			}
-			if(first) {
-				InitPlayer();
-			}
-			Vector2[] v2a = useChunks.keySet().toArray(new Vector2[useChunks.keySet().size()] );
-			for( int i = 0; i < v2a.length; i++ ) {
-				Vector2 v = v2a[i];
-				if( !requestChunks.containsKey( v ) ) {
-					level.releaseChunk(v);
-					useChunks.remove(v);
-				}
-			}
-			if( firstReloader ) { firstReloader = false; }
-			if( first ) { firstReloader = true; }
-			first = false;
-		}
-	}
-	
-	@Override
-	public final void update() throws Exception {
-		super.update();
-		synchronized (ACKQueue) {
-			if(this.ACKQueue.size() > 0){
-				int[] array = new int[this.ACKQueue.size()];
-				int offset = 0;
-				for(Integer i: ACKQueue){
-					array[offset++] = i;
-				}
-				ACKPacket pck = new ACKPacket();
-				pck.sequenceNumbers = array;
-				leader.network.server.sendTo( pck.getResponse() , IP, port);
-			}
-		}
-		synchronized (NACKQueue) {
-			if(NACKQueue.size() > 0){
-				int[] array = new int[NACKQueue.size()];
-				int offset = 0;
-				for(Integer i: NACKQueue){
-					array[offset++] = i;
-				}
-				NACKPacket pck = new NACKPacket();
-				pck.sequenceNumbers = array;
-				leader.network.server.sendTo( pck.getResponse() , IP, port);
-			}
-		}
-		if( !Queue.isEmpty() ) {
-			Queue.send();
-		}
-	}
 	
 	protected void InitPlayer() throws Exception {
-		leader.player.addLoginPlayer(this);
-		leader.player.removeNonLoginPlayer(IP);
+		leader.player.noticeLogin(this);
 		isLogin = true;
 		
-		Queue.addMinecraftPacket( new SetTimePacket(0) );
+		level.sendTime(this);
 		MovePlayerPacket player = new MovePlayerPacket(EID, x, y, z, yaw, pitch, bodyYaw, false);
 		Queue.addMinecraftPacket(player);
 		AdventureSettingPacket adp = new AdventureSettingPacket(0x20);
@@ -331,262 +197,137 @@ public final class Player extends Entity {
 		
 		//Add player for other Player
 		AddPlayerPacket app = new AddPlayerPacket(Player.this);
-		leader.player.broadcastPacket(app, false, true, Player.this);
+		leader.player.broadcastPacket(app, false, Player.this);
 		
 		sendChat( leader.config.getServerWelcomeMessage().replace("@name", name) );
 		
 		Logger.print(Logger.INFO, "%s(%s) is Connected to Server!", name, IP);
 	}
+	
+	public final boolean checkInside(int x, int y, int z) {
+		if( this.x - 0.5 > x && this.x + 0.5 < x &&
+			this.y > y && this.y + 2 < y &&
+			this.z - 0.5 > z && this.z + 0.5 < z) {
+			return true;
+		}
+		return false;
+	}
 
-	public final void handlePacket(MinecraftDataPacket MDP) throws Exception {
-		if(MDP.sequenceNumber - this.lastSequenceNum == 1){
-			lastSequenceNum = MDP.sequenceNumber;
-		}
-		else{
-			for(int i = this.lastSequenceNum; i < MDP.sequenceNumber; ++i){
-				synchronized (NACKQueue) {
-					NACKQueue.add(i);
-				}
-			}
-		}
-		synchronized (ACKQueue) {
-			ACKQueue.add(MDP.sequenceNumber);
-		}
+	public final void handlePacket(InternalDataPacket ipck) throws Exception {
 		lastPacketReceived = System.currentTimeMillis();
-		for(InternalDataPacket ipck : MDP.packets){
-			if(ipck.buffer.length == 0) { continue; }
-			switch( ipck.buffer[0] ) {
-				case MinecraftIDs.PING:
-					PingPacket ping = new PingPacket(); ping.parse(ipck.buffer);
-					PongPacket pong = new PongPacket(ping.pingID);
-					Queue.addMinecraftPacket(pong);
-					break;
-				case MinecraftIDs.CLIENT_CONNECT:
-					ClientConnectPacket connect = new ClientConnectPacket();
-					connect.parse( ipck.buffer );
-					ServerHandshakePacket servershake = new ServerHandshakePacket(port, connect.session);
-					Queue.addMinecraftPacket(servershake);
-					break;
-				case MinecraftIDs.DISCONNECT:
-					close("Client Disconnected");
-					break;
-				case MinecraftIDs.CLIENT_HANDSHAKE:
-					ClientHandshakePacket clientshake = new ClientHandshakePacket();
-					clientshake.parse( ipck.buffer );
-					break;
-				case MinecraftIDs.LOGIN:
-					LoginPacket login = new LoginPacket();
-					login.parse( ipck.buffer );
-					
-					if( chunkSender.isAlive() ) {
-						break;
+		switch( ipck.buffer[0] ) {
+			case MinecraftIDs.PING:
+				PingPacket ping = new PingPacket(); ping.parse(ipck.buffer);
+				PongPacket pong = new PongPacket(ping.pingID);
+				Queue.addMinecraftPacket(pong);
+				break;
+			case MinecraftIDs.CLIENT_CONNECT:
+				ClientConnectPacket connect = new ClientConnectPacket();
+				connect.parse( ipck.buffer );
+				ServerHandshakePacket servershake = new ServerHandshakePacket(port, connect.session);
+				Queue.addMinecraftPacket(servershake);
+				break;
+			case MinecraftIDs.DISCONNECT:
+				close("Disconnect");
+				break;
+			case MinecraftIDs.CLIENT_HANDSHAKE:
+				ClientHandshakePacket clientshake = new ClientHandshakePacket();
+				clientshake.parse( ipck.buffer );
+				break;
+			case MinecraftIDs.LOGIN:
+				LoginPacket login = new LoginPacket();
+				login.parse( ipck.buffer );
+				if(name != null) { break; }
+				name = login.username;
+				load();
+				
+				if(login.protocol != MinecraftIDs.CURRENT_PROTOCOL || login.protocol2 != MinecraftIDs.CURRENT_PROTOCOL){
+					if(login.protocol < MinecraftIDs.CURRENT_PROTOCOL || login.protocol2 < MinecraftIDs.CURRENT_PROTOCOL){
+						Queue.addMinecraftPacket(new LoginStatusPacket( LoginStatusPacket.CLIENT_OUTDATE ));
+						close("Wrong Protocol: Client is outdated.");
 					}
-					
-					name = login.username;
-					load();
-					
-					if(login.protocol != MinecraftIDs.CURRENT_PROTOCOL || login.protocol2 != MinecraftIDs.CURRENT_PROTOCOL){
-						if(login.protocol < MinecraftIDs.CURRENT_PROTOCOL || login.protocol2 < MinecraftIDs.CURRENT_PROTOCOL){
-							Queue.addMinecraftPacket(new LoginStatusPacket( LoginStatusPacket.CLIENT_OUTDATE ));
-							close("Wrong Protocol: Client is outdated.");
-						}
-						if(login.protocol > MinecraftIDs.CURRENT_PROTOCOL || login.protocol2 > MinecraftIDs.CURRENT_PROTOCOL){
-							Queue.addMinecraftPacket(new LoginStatusPacket( LoginStatusPacket.SERVER_OUTDATE ));
-							close("Wrong Protocol: Server is outdated.");
-						}
-						break;
+					if(login.protocol > MinecraftIDs.CURRENT_PROTOCOL || login.protocol2 > MinecraftIDs.CURRENT_PROTOCOL){
+						Queue.addMinecraftPacket(new LoginStatusPacket( LoginStatusPacket.SERVER_OUTDATE ));
+						close("Wrong Protocol: Server is outdated.");
 					}
-					//TODO Player count limit
-					Queue.addMinecraftPacket( new LoginStatusPacket(LoginStatusPacket.NORMAL) );
-					//TODO Check Player Name is Valid?
-					if( !leader.player.checkValid(this) ) {
-						return;
-					}
-					
-					StartGamePacket startgame = new StartGamePacket(new Vector(128, 4, 128), new Vector( (int) x, (int) y, (int) z ), 1, 0L, EID);
-					Queue.addMinecraftPacket(startgame);
-					
-					//TODO RealTime
-					SetTimePacket stp = new SetTimePacket(0x00);
-					Queue.addMinecraftPacket(stp);
-					
-					SetSpawnPositionPacket sspp = new SetSpawnPositionPacket( new Vector(128, 4, 128) );
-					Queue.addMinecraftPacket(sspp);
-					
-					SetHealthPacket shp = new SetHealthPacket((byte) 0x20);
-					Queue.addMinecraftPacket(shp);
-					
-					chunkSender.start();
+					break;
+				}
+				//TODO Player count limit
+				Queue.addMinecraftPacket( new LoginStatusPacket(LoginStatusPacket.NORMAL) );
+				//TODO Check Player Name is Valid?
+				
+				if( !leader.player.checkValid(this) ) {
+					return;
+				}
+				
+				StartGamePacket startgame = new StartGamePacket(new Vector(128, 4, 128), new Vector( (int) x, (int) y, (int) z ), 1, 0L, EID);
+				Queue.addMinecraftPacket(startgame);
 
+				level.sendTime(this);
+				
+				SetSpawnPositionPacket sspp = new SetSpawnPositionPacket( new Vector(128, 4, 128) );
+				Queue.addMinecraftPacket(sspp);
+				
+				SetHealthPacket shp = new SetHealthPacket((byte) 0x20);
+				Queue.addMinecraftPacket(shp);
+
+				worker.setName("Player: " + name);
+				break;
+			case MinecraftIDs.MESSAGE:
+				MessagePacket message = new MessagePacket();
+				message.parse( ipck.buffer );
+				leader.chat.handleChat( this, message.getMessage() );
+				break;
+			case MinecraftIDs.MOVE_PLAYER:
+				MovePlayerPacket movePlayer = new MovePlayerPacket();
+				movePlayer.parse( ipck.buffer );
+				x = movePlayer.x;
+				y = movePlayer.y;
+				z = movePlayer.z;
+				yaw = movePlayer.yaw;
+				pitch = movePlayer.pitch;
+				bodyYaw = movePlayer.bodyYaw;
+				updateMovement();
+				break;
+			case MinecraftIDs.ANIMATE:
+				AnimatePacket ani = new AnimatePacket();
+				ani.parse( ipck.buffer );
+				ani.eid = getEID();
+				leader.player.broadcastPacket(ani, true, this);
+				break;
+			case MinecraftIDs.REMOVE_BLOCK:
+				RemoveBlockPacket rbp = new RemoveBlockPacket();
+				rbp.parse( ipck.buffer );
+				UpdateBlockPacket ubp = new UpdateBlockPacket(rbp.x, rbp.y, rbp.z, (byte) 0, (byte) 0);
+				level.setBlock(rbp.x, rbp.y, rbp.z, (byte) 0x00, (byte) 0x00); 
+				leader.player.broadcastPacket(ubp, false);
+				break;
+			case MinecraftIDs.USE_ITEM:
+				UseItemPacket uip = new UseItemPacket();
+				uip.parse( ipck.buffer );
+				if( !(uip.face >= 0 && uip.face <= 5) ) {
 					break;
-				case MinecraftIDs.MESSAGE:
-					MessagePacket message = new MessagePacket();
-					message.parse( ipck.buffer );
-					leader.chat.handleChat( this, message.getMessage() );
-					break;
-				case MinecraftIDs.MOVE_PLAYER:
-					MovePlayerPacket movePlayer = new MovePlayerPacket();
-					movePlayer.parse( ipck.buffer );
-					x = movePlayer.x;
-					y = movePlayer.y;
-					z = movePlayer.z;
-					yaw = movePlayer.yaw;
-					pitch = movePlayer.pitch;
-					bodyYaw = movePlayer.bodyYaw;
-					break;
-				case MinecraftIDs.ANIMATE:
-					AnimatePacket ani = new AnimatePacket();
-					ani.parse( ipck.buffer );
-					ani.eid = getEID();
-					leader.player.broadcastPacket(ani, true, true, this);
-					break;
-				case MinecraftIDs.REMOVE_BLOCK:
-					RemoveBlockPacket rbp = new RemoveBlockPacket();
-					rbp.parse( ipck.buffer );
-					UpdateBlockPacket ubp = new UpdateBlockPacket(rbp.x, rbp.y, rbp.z, (byte) 0, (byte) 0);
-					level.setBlock(rbp.x, rbp.y, rbp.z, (byte) 0x00, (byte) 0x00); 
-					leader.player.broadcastPacket(ubp, false, false); //for Apply Chunk Change During Sending FullChunk
-					break;
-				case MinecraftIDs.USE_ITEM:
-					UseItemPacket uip = new UseItemPacket();
-					uip.parse( ipck.buffer );
-					uip.eid = getEID();
-					if( !(uip.face >= 0 && uip.face <= 5) ) {
-						break;
-					}
-					Vector Target = new Vector(uip.x, uip.y, uip.z).getSide((byte) uip.face, 1);
-					byte TB = level.getBlock(Target);
-					if( TB == 0x00 ) {
-						UpdateBlockPacket uubp = new UpdateBlockPacket(Target.getX(), (byte) Target.getY(), Target.getZ(), (byte) uip.item, (byte) uip.meta);
-						level.setBlock(Target, (byte) uip.item, (byte) uip.meta);
-						leader.player.broadcastPacket(uubp, false, false); //for Apply Chunk Change During Sending FullChunk
-					}
-					break;
-				case MinecraftIDs.PLAYER_EQUIPMENT:
-					PlayerEquipmentPacket pep = new PlayerEquipmentPacket();
-					pep.parse( ipck.buffer );
-					pep.eid = EID; pep.slot = 0;
-					leader.player.broadcastPacket(pep, false, true, this);
-					break;
-			}
+				}
+				Logger.print(Logger.DEBUG, "%d, %d, %d, %d", uip.item, uip.x, uip.y, uip.z);
+				uip.eid = getEID();
+				Item item = Item.getItem(uip.item);
+				Vector v = new Vector(uip.x, uip.y, uip.z);
+				if(item.checkValid(v)) {
+					item.use(v, this, level, uip.meta, uip.face);
+				}
+				break;
+			case MinecraftIDs.PLAYER_EQUIPMENT:
+				PlayerEquipmentPacket pep = new PlayerEquipmentPacket();
+				pep.parse( ipck.buffer );
+				pep.eid = EID; pep.slot = 0;
+				leader.player.broadcastPacket(pep, false, this);
+				break;
 		}
 	}
 	
 	public final void handleVerfiy(AcknowledgePacket ACK) throws Exception {
 		lastPacketReceived = System.currentTimeMillis();
-		if( ACK.getPID() == RaknetIDs.ACK ) {
-			for(int i: ACK.sequenceNumbers){
-				recoveryQueue.remove(i);
-			}
-		} else if( ACK.getPID() == RaknetIDs.NACK ) {
-			for(int i: ACK.sequenceNumbers){
-				if( recoveryQueue.containsKey(i) ) {
-					leader.network.server.sendTo( recoveryQueue.get(i) , IP, port);
-				} else if( OftenrecoveryQueue.containsKey(i) ) { //Often Changed Movement Packet!
-					InternalDataPacket idp = OftenrecoveryQueue.get(i);
-					switch( idp.buffer[0] ) {
-						case MinecraftIDs.MOVE_PLAYER:
-							MovePlayerPacket mpp = new MovePlayerPacket(EID, x, y, z, yaw, pitch, bodyYaw, false);
-							idp.buffer = mpp.getResponse();
-							Queue.recoverOftenPacket(i, idp.toBinary());
-					}
-				}
-			}
-		} else {
-			
-		}
-	}
-	
-	public final class InternalDataPacketQueue {
-		public ByteBuffer buffer;
-		public ByteBuffer directBuffer;
-		public int sequenceNumber = 0;
-		public int messageIndex = 0;
-		public int orderIndex = 0;
-		public final int mtu;
-		
-		public InternalDataPacketQueue(int mtu) {
-			this.mtu = mtu;
-			buffer = ByteBuffer.allocate(mtu);
-			directBuffer = ByteBuffer.allocate(mtu);
-			resetBuffer();
-		}
-		
-		public final void resetBuffer() {
-			buffer.clear();
-			buffer.position(4);
-		}
-		
-		public final boolean isEmpty() {
-			return buffer.position() == 4;
-		}
-		
-		public final void addMinecraftPacket(BaseMinecraftPacket bmp) throws Exception {
-			addMinecraftPacket( bmp.getResponse() );
-		}
-		
-		/**
-		 * Add MinecraftPacket to Buffer, if Buffer is Full, send directly
-		 * @param buf
-		 */
-		public final void addMinecraftPacket(byte[] buf) throws Exception {
-			synchronized ( this ) {
-				if( mtu < buffer.position() + buf.length + 4 ) {
-					//Buffer is Empty = buf too big to send.
-					if( isEmpty() ) {
-						throw new RuntimeException("Unhandled Too Big Packet");
-					} else {
-						send();
-						//retry
-						addMinecraftPacket(buf);
-					}
-					return;
-				}
-				InternalDataPacket idp = new InternalDataPacket();
-				idp.buffer = buf;
-				idp.reliability = 2;
-				idp.messageIndex = messageIndex++;
-				buffer.put( idp.toBinary() );
-			}
-		}
-		
-		public final void sendOffenPacket(BaseMinecraftPacket pak) throws Exception {
-			synchronized ( this ) {
-				InternalDataPacket idp = InternalDataPacket.wrapMCPacket(pak.getResponse(), messageIndex++);
-				directBuffer.clear(); directBuffer.position(4);
-				directBuffer.put( idp.toBinary() );
-				OftenrecoveryQueue.put(sequenceNumber, idp);
-				send(directBuffer);
-			}
-		}
-		
-		protected final void recoverOftenPacket(int seq, byte[] buf) throws Exception {
-			synchronized ( this ) {
-				directBuffer.clear(); directBuffer.position(4);
-				directBuffer.put( buf );
-				send(seq, directBuffer);
-			}
-		}
-		
-		public final void send() throws Exception {
-			recoveryQueue.put(sequenceNumber, send(buffer));
-		}
-		
-		private final byte[] send(ByteBuffer buffer) throws Exception {
-			return send(sequenceNumber++, buffer);
-		}
-		
-		protected final byte[] send(int seq, ByteBuffer buffer) throws Exception {
-			synchronized ( this ) {
-				//System.out.println("seq:" + seq);
-				int len = buffer.position();
-				buffer.position(0);
-				buffer.put( RaknetIDs.DATA_PACKET_4 );
-				buffer.put( Utils.putLTriad(seq) );
-				leader.network.server.sendTo(buffer.array(), 4+len, IP, port);
-				return Arrays.copyOfRange(buffer.array(), 0, 4+len);
-			}
-		}
+		Queue.handleVerify(ACK);
 	}
 	
 	public long getClientID() {
@@ -600,6 +341,11 @@ public final class Player extends Entity {
 	@Override
 	public void updateMovement() throws Exception {
 		MovePlayerPacket mpp = new MovePlayerPacket(EID, x, y, z, yaw, pitch, bodyYaw, false);
-		leader.player.broadcastPacket(mpp, true, true, (Player) this);
+		leader.player.broadcastPacket(mpp, true, this);
+	}
+
+	@Override
+	protected boolean isNeedUpdate() {
+		return false;
 	}
 }

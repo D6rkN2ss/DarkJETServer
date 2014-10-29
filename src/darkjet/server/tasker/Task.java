@@ -18,6 +18,6 @@ public abstract class Task {
 		this.etick = tick;
 		this.delay = this.sdelay = delay;
 	}
-	public abstract void onRun();
+	public abstract void onRun(long currentTick);
 	public abstract void onFinish();
 }

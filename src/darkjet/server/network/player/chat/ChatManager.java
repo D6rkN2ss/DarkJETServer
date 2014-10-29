@@ -20,7 +20,7 @@ public final class ChatManager extends BaseManager {
 	
 	public final void broadcastChat(String message, Player... Ignore) throws Exception {
 		MessagePacket mp = new MessagePacket(message);
-		leader.player.broadcastPacket(mp, false, true, Ignore);
+		leader.player.broadcastPacket(mp, false, Ignore);
 	}
 
 	@Override

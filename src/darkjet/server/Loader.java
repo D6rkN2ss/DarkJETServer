@@ -10,16 +10,11 @@ import java.io.InputStreamReader;
 public final class Loader {
 	public final static void main(String[] args) {
 		Leader leader = new Leader();
-		boolean exit = true;
 		BufferedReader scanInput = new BufferedReader( new InputStreamReader(System.in) );
-		while ( exit ) {
+		while ( !leader.exit ) {
 			try {
 				String input = scanInput.readLine();
-				if( input.equals("exit") ) {
-					Logger.print(Logger.INFO, "Exiting...");
-					leader.stop();
-					exit = false;
-				}
+				leader.command.handleCommand(input);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

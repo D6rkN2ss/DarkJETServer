@@ -1,6 +1,5 @@
 package darkjet.server.level.chunk;
 
-import darkjet.server.Logger;
 import darkjet.server.utility.Utils;
 
 /**
@@ -51,6 +50,19 @@ public class Chunk {
 	
 	public final byte getBlock(int x, int y, int z) {
 		return blockIDs[(x << 11) + (z << 7) + y];
+	}
+	
+	public final byte getBlockMeta(int x, int y, int z) {
+		int inx = (x << 11) + (z << 7) + y;
+		float fi = (float) inx / 2;
+		int minx = (int) Math.floor( fi );
+		
+		byte damage = blockDamages[minx];
+		if( fi != (float) minx ) { //Nibble in Forward
+			damage = (byte) (damage >> 4);
+		}
+		
+		return damage;
 	}
 	
 	/**
