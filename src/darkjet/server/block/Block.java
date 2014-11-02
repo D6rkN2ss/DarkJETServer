@@ -40,7 +40,7 @@ public class Block extends Item {
 		}
 	}
 	
-	public void onUpdate(Level level) {
+	public void onUpdate(Level level, Vector v) throws Exception {
 		
 	}
 	

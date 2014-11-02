@@ -1,6 +1,7 @@
 package darkjet.server.block;
 
 import java.util.HashMap;
+import java.util.Queue;
 
 import darkjet.server.Logger;
 import darkjet.server.level.Level;
@@ -15,58 +16,54 @@ public class Rail extends Block {
 		MetaMap.put(Vector.SIDE_WEST, (byte) 2);
 		MetaMap.put(Vector.SIDE_EAST, (byte) 3);
 	}
-	//MAX = 10
-	//0, WE
-	//1, NS
-	//2, S Upper N
-	//3, N Upper S
-	//4, E Upper W
-	//5, W Upper E
-	//6, W to S
-	//7, W to N
-	//8, E to N
-	//9, E to S
 	
+	//MAX = 10
+	//0, NS
+	//1, WE
+	//2, E Upper W
+	//3, W Upper E
+	//4, S Upper N
+	//5, N Upper S
+	//6, E to S
+	//7, W to S
+	//8, W to N
+	//9, E to N
 	
 	public Rail(int id) {
 		super(id);
 	}
 	
-	private final boolean UpperConnectAble(Level level, Vector vector, byte UPPER, byte LOWER) {
-		return level.getBlock( vector.getSide(UPPER, 1).getSide(Vector.SIDE_UP, 1) ) != 66 ||
-				level.getBlock( vector.getSide(LOWER, 1) ) != 66 ||
-				level.getBlock( vector.getSide(LOWER, 1).getSide(Vector.SIDE_DOWN, 1) ) != 66;
-	}
-	
 	public final boolean connectAble(Level level, Vector vector) {
-		byte meta = level.getBlockMeta(vector);
-		return connectAble(level, vector, meta);
+		return connectAble(level, vector, level.getBlock(vector), level.getBlockMeta(vector));
 	}
 	
-	public final boolean connectAble(Level level, Vector vector, byte meta) {
-		switch( meta ) {
-		case 0:
-			return level.getBlock( vector.getSide(Vector.SIDE_WEST, 1) ) != 66 || level.getBlock( vector.getSide(Vector.SIDE_EAST, 1) ) != 66;
-		case 1:
-			return level.getBlock( vector.getSide(Vector.SIDE_NORTH, 1) ) != 66 || level.getBlock( vector.getSide(Vector.SIDE_SOUTH, 1) ) != 66;
-		case 2:
-			return UpperConnectAble(level, vector, Vector.SIDE_SOUTH, Vector.SIDE_NORTH);
-		case 3:
-			return UpperConnectAble(level, vector, Vector.SIDE_NORTH, Vector.SIDE_SOUTH);
-		case 4:
-			return UpperConnectAble(level, vector, Vector.SIDE_EAST, Vector.SIDE_WEST);
-		case 5:
-			return UpperConnectAble(level, vector, Vector.SIDE_WEST, Vector.SIDE_EAST);
-		case 6:
-			return level.getBlock( vector.getSide(Vector.SIDE_WEST, 1) ) != 66 || level.getBlock( vector.getSide(Vector.SIDE_SOUTH, 1) ) != 66;
-		case 7:
-			return level.getBlock( vector.getSide(Vector.SIDE_WEST, 1) ) != 66 || level.getBlock( vector.getSide(Vector.SIDE_NORTH, 1) ) != 66;
-		case 8:
-			return level.getBlock( vector.getSide(Vector.SIDE_EAST, 1) ) != 66 || level.getBlock( vector.getSide(Vector.SIDE_SOUTH, 1) ) != 66;
-		case 9:
-			return level.getBlock( vector.getSide(Vector.SIDE_EAST, 1) ) != 66 || level.getBlock( vector.getSide(Vector.SIDE_NORTH, 1) ) != 66;
+	//MAX = 10
+	//0, NS
+	//1, WE
+	//2, E Upper W
+	//3, W Upper E
+	//4, N Upper S
+	//5, S Upper N
+	//6, E to S
+	//7, W to S
+	//8, W to N
+	//9, E to N
+	
+	public final boolean connectAble(Level level, Vector vector, byte id, byte meta) {
+		if( id != 66 ) {
+			return false;
 		}
-		throw new RuntimeException("Unknown Metadata");
+		/*
+		int count = 0;
+		for(byte i = Vector.SIDE_NORTH; i < Vector.SIDE_EAST; i++) {
+			if(count == 2) { break; }
+			if( level.getBlock( vector.getSide(i, 1) ) == 66 ) {
+				count++;
+			}
+		}
+		if(count == 2) { return false; }
+		*/
+		return true;
 	}
 	
 	public final SidedVector getPossibleBlock(Level level, Vector v) {
@@ -89,33 +86,102 @@ public class Rail extends Block {
 		return result;
 	}
 	
-	public final void progressMeta(SidedVector v, byte side, Vector placeVector, Level level, short meta, short normal, short up, short down) throws Exception {
-		if(v == null) { return; }
-		meta = normal;
-		switch( v.side ) {
-		case -1:
-			level.setBlock(v, level.getBlock(v), (byte) normal);
-			break;
-		case Vector.SIDE_DOWN:
-			level.setBlock(v, level.getBlock(v), (byte) down);
-			if( level.getBlock( placeVector.getSide(Vector.SIDE_UP, 1).getSide( Vector.invertSide( side ) , 1) ) == 66 ) {
-				meta = down;
-			}
-			break;
-		case Vector.SIDE_UP:
-			level.setBlock(v, level.getBlock(v), (byte) up);
-			if( level.getBlock( placeVector.getSide(Vector.SIDE_DOWN, 1).getSide( Vector.invertSide( side ) , 1) ) == 66 ) {
-				meta = up;
-			}
-			break;
+	
+	
+	@Override
+	public void onUpdate(Level level, Vector v) throws Exception {
+		byte meta = progressMeta(level, v);
+		if( level.getBlockMeta(v) != meta && meta != -1 ) {
+			level.setBlockMeta(v, meta);
 		}
 	}
+
+	@Override
+	public void getUpdateRange(Queue<Vector> updateList, int x, int y, int z) {
+		Vector v = new Vector(x, y ,z);
+		Vector up = v.getSide(Vector.SIDE_UP, 1);
+		Vector down = v.getSide(Vector.SIDE_DOWN, 1);
+		updateList.add( v.getSide(Vector.SIDE_NORTH, 1) );
+		updateList.add( v.getSide(Vector.SIDE_SOUTH, 1) );
+		updateList.add( v.getSide(Vector.SIDE_WEST, 1) );
+		updateList.add( v.getSide(Vector.SIDE_EAST, 1) );
+		
+		updateList.add( up.getSide(Vector.SIDE_NORTH, 1) );
+		updateList.add( up.getSide(Vector.SIDE_SOUTH, 1) );
+		updateList.add( up.getSide(Vector.SIDE_WEST, 1) );
+		updateList.add( up.getSide(Vector.SIDE_EAST, 1) );
+
+		updateList.add( down.getSide(Vector.SIDE_NORTH, 1) );
+		updateList.add( down.getSide(Vector.SIDE_SOUTH, 1) );
+		updateList.add( down.getSide(Vector.SIDE_WEST, 1) );
+		updateList.add( down.getSide(Vector.SIDE_EAST, 1) );
+	}
+
+	public final byte progressMeta(Level level, Vector v) {
+		byte meta = -1;
+		Vector up = v.getSide(Vector.SIDE_UP, 1);
+		Vector down = v.getSide(Vector.SIDE_DOWN, 1);
+		boolean north = connectAble(level, v.getSide(Vector.SIDE_NORTH, 1));
+		boolean upnorth = connectAble(level, up.getSide(Vector.SIDE_NORTH, 1));
+		boolean downnorth = connectAble(level, down.getSide(Vector.SIDE_NORTH, 1));
+		
+		boolean south = connectAble(level, v.getSide(Vector.SIDE_SOUTH, 1));
+		boolean upsouth = connectAble(level, up.getSide(Vector.SIDE_SOUTH, 1));
+		boolean downsouth = connectAble(level, down.getSide(Vector.SIDE_SOUTH, 1));
+		
+		boolean west = connectAble(level, v.getSide(Vector.SIDE_WEST, 1));
+		boolean upwest = connectAble(level, up.getSide(Vector.SIDE_WEST, 1));
+		boolean downwest = connectAble(level, down.getSide(Vector.SIDE_WEST, 1));
+		
+		boolean east = connectAble(level, v.getSide(Vector.SIDE_EAST, 1));
+		boolean upeast = connectAble(level, up.getSide(Vector.SIDE_EAST, 1));
+		boolean downeast = connectAble(level, down.getSide(Vector.SIDE_EAST, 1));
+		
+		//MAX = 10
+		//0, NS
+		//1, WE
+		//2, E Upper W
+		//3, W Upper E
+		//4, N Upper S
+		//5, S Upper N
+		//6, E to S
+		//7, W to S
+		//8, W to N
+		//9, E to N
+		if( (upeast || east || downeast) && (upnorth || north || downnorth) ) {
+			meta = 9;
+		} else if( (upwest || west || downwest) && (upnorth || north || downnorth) ) {
+			meta = 8;
+		} else if( (upwest || west || downwest) && (upsouth || south || downsouth) ) {
+			meta = 7;
+		} else if( (upeast || east || downeast) && (upsouth || south || downsouth) ) {
+			meta = 6;
+		} else if( upsouth ) {
+			meta = 5;
+		} else if( upnorth ) {
+			meta = 4;
+		} else if( upwest ) {
+			meta = 3;
+		} else if( upeast ) {
+			meta = 2;
+		} else if (west || east) {
+			meta = 1;
+		} else if (north || south){
+			meta = 0;
+		}
+		Logger.print(Logger.DEBUG, "Worked Meta: %d", meta);
+		return meta;
+	}
+	
+	
 	
 	@Override
 	public boolean use(Vector vector, Player player, Level level, short meta,
 			int face) throws Exception {
-		meta = 0;
-		//TODO Complete It
+		Vector v = vector.getSide((byte) face, 1);
+	
+		meta = progressMeta(level, v);
+		if(meta == -1) { meta = 0; }
 		return super.place(vector, player, level, this.id, meta, face);
 	}
 	
