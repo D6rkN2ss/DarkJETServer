@@ -1,7 +1,7 @@
 package darkjet.server.block;
 
 import java.util.HashMap;
-import java.util.List;
+import java.util.Queue;
 import darkjet.server.item.Item;
 import darkjet.server.level.Level;
 import darkjet.server.math.Vector;
@@ -40,7 +40,11 @@ public class Block extends Item {
 		}
 	}
 	
-	public void getUpdateRange(List<Vector> updateList, int x, int y, int z) {
+	public void onUpdate(Level level, Vector v) throws Exception {
+		
+	}
+	
+	public void getUpdateRange(Queue<Vector> updateList, int x, int y, int z) {
 		Vector v = new Vector(x, y, z);
 		updateList.add(v.getSide(Vector.SIDE_UP, 1));
 		updateList.add(v.getSide(Vector.SIDE_DOWN, 1));

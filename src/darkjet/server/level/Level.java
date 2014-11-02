@@ -40,7 +40,7 @@ public final class Level {
 		this.leader = leader;
 		this.Name = Name;
 		this.entites = new EntityManager(leader);
-		this.blocks = new BlockManager(this);
+		this.blocks = new BlockManager(leader, this);
 		entites.Init();
 		
 		try {
@@ -142,7 +142,9 @@ public final class Level {
 	}
 	
 	public final Chunk getChunk(int chunkX, int chunkZ) {
-		return ChunkCaches.get( new Vector2(chunkX, chunkZ) ).chunk;
+		Vector2 v2 = new Vector2(chunkX, chunkZ);
+		if( !ChunkCaches.containsKey( v2 ) ) { return null; }
+		return ChunkCaches.get( v2 ).chunk;
 	}
 	
 	/**
@@ -174,7 +176,7 @@ public final class Level {
 	public final void setBlock(int x, int y, int z, byte id, byte meta) throws Exception {
 		synchronized (this) {
 			Vector2 cv = new Vector2( x >>4, z >> 4 );
-			Chunk chunk = ChunkCaches.get( cv ).chunk;
+			Chunk chunk = getChunk( cv.getX(), cv.getZ() );
 			if( chunk == null ) {
 				chunk = requestChunk( cv );
 			}
@@ -190,6 +192,9 @@ public final class Level {
 			leader.player.broadcastPacket(uubp, false);
 		}
 	}
+	public final void setBlockMeta(Vector v, byte meta) throws Exception {
+		setBlock(v.getX(), v.getY(), v.getZ(), getBlock(v), meta);
+	}
 
 	public final byte getBlock(Vector v) {
 		return getBlock(v.getX(), v.getY(), v.getZ());
@@ -197,7 +202,11 @@ public final class Level {
 	
 	public final byte getBlock(int x, int y, int z) {
 		synchronized (this) {
-			Chunk chunk = ChunkCaches.get( new Vector2( x >>4, z >> 4 ) ).chunk;
+			Vector2 cv = new Vector2( x >>4, z >> 4 );
+			Chunk chunk = getChunk( cv.getX(), cv.getZ() );
+			if( chunk == null ) {
+				chunk = requestChunk( cv );
+			}
 			while( !chunk.isReady() ) {
 				
 			}

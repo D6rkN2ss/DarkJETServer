@@ -35,6 +35,12 @@ public final class CommandManager extends BaseManager {
 				return;
 			}
 			Logger.print(Logger.INFO, "%d, %d, %d", p.getX(), p.getY(), p.getZ());
+		} else if( Line.equals("resettime") ) {
+			try {
+				leader.level.getLoadedLevel("world").setTime(0x00);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	
