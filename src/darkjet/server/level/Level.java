@@ -190,6 +190,9 @@ public final class Level {
 			leader.player.broadcastPacket(uubp, false);
 		}
 	}
+	public final void setBlockMeta(Vector v, byte meta) throws Exception {
+		setBlock(v.getX(), v.getY(), v.getZ(), getBlock(v), meta);
+	}
 
 	public final byte getBlock(Vector v) {
 		return getBlock(v.getX(), v.getY(), v.getZ());
